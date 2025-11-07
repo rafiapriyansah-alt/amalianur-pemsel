@@ -83,7 +83,7 @@ export default function Footer() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: "easeInOut" }
+      transition: { duration: 0.6, ease: [0.42, 0, 0.58, 1], }
     }
   };
 
@@ -339,7 +339,7 @@ export default function Footer() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
+            transition={{ duration: 0.6, ease: [0.42, 0, 0.58, 1],}}
             className="flex flex-col md:flex-row justify-between items-center gap-3 text-center"
           >
             <div className="flex items-center gap-2 text-gray-600 text-sm">
@@ -360,13 +360,13 @@ export default function Footer() {
       {/* ✅ Floating Decoration FIXED */}
       <motion.div
         animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 4, repeat: Infinity, ease:[0.42, 0, 0.58, 1], }}
         className="absolute bottom-10 left-10 w-4 h-4 bg-emerald-300 rounded-full opacity-20"
       />
 
       <motion.div
         animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        transition={{ duration: 3, repeat: Infinity, ease: [0.42, 0, 0.58, 1], delay: 1 }}
         className="absolute top-20 right-20 w-3 h-3 bg-white rounded-full opacity-20"
       />
 
