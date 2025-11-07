@@ -23,15 +23,17 @@ interface SettingsData {
   logo_url?: string;
   footer_logo?: string;
   footer_text?: string;
-  // Social media fields
+
   facebook_yayasan?: string;
   facebook_tk?: string;
   facebook_kb?: string;
   facebook_mts?: string;
+
   instagram_yayasan?: string;
   instagram_tk?: string;
   instagram_kb?: string;
   instagram_mts?: string;
+
   youtube_yayasan?: string;
   youtube_tk?: string;
   youtube_kb?: string;
@@ -53,11 +55,9 @@ export default function Footer() {
 
   useEffect(() => {
     const loadData = async () => {
-      // Load settings
       const { data: settingsData } = await supabase.from("settings").select("*").single();
       setSettings(settingsData);
 
-      // Load contact info
       const { data: contactData } = await supabase.from("contact").select("*").single();
       setContact(contactData);
     };
@@ -84,6 +84,7 @@ export default function Footer() {
     };
   }, []);
 
+  // ✅ FIX: perbaikan framer-motion variants (ease harus array, bukan string)
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -101,102 +102,41 @@ export default function Footer() {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: "easeOut"
+        ease: [0.42, 0, 0.58, 1]
       }
     }
   };
 
-  // Social links dengan data dari database - TAMPILKAN SEMUA ICON
   const socialLinks = [
     { 
       icon: Facebook, 
       label: "Facebook",
       options: [
-        { 
-          name: "Yayasan Amalianur", 
-          href: settings?.facebook_yayasan || "#", 
-          icon: Building,
-          hasLink: !!settings?.facebook_yayasan?.trim()
-        },
-        { 
-          name: "TK Amalianur", 
-          href: settings?.facebook_tk || "#", 
-          icon: School,
-          hasLink: !!settings?.facebook_tk?.trim()
-        },
-        { 
-          name: "KB Amalianur", 
-          href: settings?.facebook_kb || "#", 
-          icon: Users,
-          hasLink: !!settings?.facebook_kb?.trim()
-        },
-        { 
-          name: "MTs Amalianur", 
-          href: settings?.facebook_mts || "#", 
-          icon: School,
-          hasLink: !!settings?.facebook_mts?.trim()
-        }
-      ].filter(option => option.hasLink) // Hanya tampilkan opsi dropdown yang ada linknya
+        { name: "Yayasan Amalianur", href: settings?.facebook_yayasan || "#", icon: Building, hasLink: !!settings?.facebook_yayasan?.trim() },
+        { name: "TK Amalianur", href: settings?.facebook_tk || "#", icon: School, hasLink: !!settings?.facebook_tk?.trim() },
+        { name: "KB Amalianur", href: settings?.facebook_kb || "#", icon: Users, hasLink: !!settings?.facebook_kb?.trim() },
+        { name: "MTs Amalianur", href: settings?.facebook_mts || "#", icon: School, hasLink: !!settings?.facebook_mts?.trim() }
+      ].filter(v => v.hasLink)
     },
     { 
       icon: Instagram, 
       label: "Instagram",
       options: [
-        { 
-          name: "Yayasan Amalianur", 
-          href: settings?.instagram_yayasan || "#", 
-          icon: Building,
-          hasLink: !!settings?.instagram_yayasan?.trim()
-        },
-        { 
-          name: "TK Amalianur", 
-          href: settings?.instagram_tk || "#", 
-          icon: School,
-          hasLink: !!settings?.instagram_tk?.trim()
-        },
-        { 
-          name: "KB Amalianur", 
-          href: settings?.instagram_kb || "#", 
-          icon: Users,
-          hasLink: !!settings?.instagram_kb?.trim()
-        },
-        { 
-          name: "MTs Amalianur", 
-          href: settings?.instagram_mts || "#", 
-          icon: School,
-          hasLink: !!settings?.instagram_mts?.trim()
-        }
-      ].filter(option => option.hasLink)
+        { name: "Yayasan Amalianur", href: settings?.instagram_yayasan || "#", icon: Building, hasLink: !!settings?.instagram_yayasan?.trim() },
+        { name: "TK Amalianur", href: settings?.instagram_tk || "#", icon: School, hasLink: !!settings?.instagram_tk?.trim() },
+        { name: "KB Amalianur", href: settings?.instagram_kb || "#", icon: Users, hasLink: !!settings?.instagram_kb?.trim() },
+        { name: "MTs Amalianur", href: settings?.instagram_mts || "#", icon: School, hasLink: !!settings?.instagram_mts?.trim() }
+      ].filter(v => v.hasLink)
     },
     { 
       icon: Youtube, 
       label: "YouTube",
       options: [
-        { 
-          name: "Yayasan Amalianur", 
-          href: settings?.youtube_yayasan || "#", 
-          icon: Building,
-          hasLink: !!settings?.youtube_yayasan?.trim()
-        },
-        { 
-          name: "TK Amalianur", 
-          href: settings?.youtube_tk || "#", 
-          icon: School,
-          hasLink: !!settings?.youtube_tk?.trim()
-        },
-        { 
-          name: "KB Amalianur", 
-          href: settings?.youtube_kb || "#", 
-          icon: Users,
-          hasLink: !!settings?.youtube_kb?.trim()
-        },
-        { 
-          name: "MTs Amalianur", 
-          href: settings?.youtube_mts || "#", 
-          icon: School,
-          hasLink: !!settings?.youtube_mts?.trim()
-        }
-      ].filter(option => option.hasLink)
+        { name: "Yayasan Amalianur", href: settings?.youtube_yayasan || "#", icon: Building, hasLink: !!settings?.youtube_yayasan?.trim() },
+        { name: "TK Amalianur", href: settings?.youtube_tk || "#", icon: School, hasLink: !!settings?.youtube_tk?.trim() },
+        { name: "KB Amalianur", href: settings?.youtube_kb || "#", icon: Users, hasLink: !!settings?.youtube_kb?.trim() },
+        { name: "MTs Amalianur", href: settings?.youtube_mts || "#", icon: School, hasLink: !!settings?.youtube_mts?.trim() }
+      ].filter(v => v.hasLink)
     }
   ];
 
@@ -221,7 +161,6 @@ export default function Footer() {
 
   return (
     <footer className="bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 text-white relative overflow-hidden">
-      {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 25px 25px, white 2%, transparent 0%), 
@@ -238,7 +177,9 @@ export default function Footer() {
           viewport={{ once: true, margin: "-100px" }}
           className="grid lg:grid-cols-4 md:grid-cols-2 gap-10 items-start"
         >
-          {/* Kolom 1 - Brand & Description */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
+          {/* ✅ Kolom 1 */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
           <motion.div variants={itemVariants} className="lg:col-span-1">
             <div className="flex items-center gap-4 mb-6">
               {settings?.footer_logo && (
@@ -247,12 +188,9 @@ export default function Footer() {
                   transition={{ type: "spring", stiffness: 300 }}
                   className="relative"
                 >
-                  {/* Stroke putih tipis mengikuti bentuk logo */}
                   <div 
                     className="absolute inset-0"
-                    style={{
-                      filter: 'drop-shadow(0 0 1px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(255,255,255,0.6))'
-                    }}
+                    style={{ filter: 'drop-shadow(0 0 1px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(255,255,255,0.6))' }}
                   >
                     <img
                       src={settings.footer_logo}
@@ -267,6 +205,7 @@ export default function Footer() {
                   />
                 </motion.div>
               )}
+              
               <div>
                 <h3 className="text-2xl font-bold text-white mb-1">
                   {settings?.site_name || "Yayasan Amalianur"}
@@ -274,14 +213,14 @@ export default function Footer() {
                 <div className="w-12 h-1 bg-emerald-300 rounded-full"></div>
               </div>
             </div>
-            
+
             <p className="text-green-100 leading-relaxed mb-6 text-sm">
-              {settings?.tagline || "Membangun Generasi Islami dan Berakhlak Mulia melalui pendidikan berkualitas yang mengintegrasikan iman, ilmu, dan amal."}
+              {settings?.tagline || 
+              "Membangun Generasi Islami dan Berakhlak Mulia melalui pendidikan berkualitas."}
             </p>
 
-            {/* Social Media Links dengan Dropdown */}
             <div className="flex gap-2 relative">
-              {socialLinks.map((social, index) => (
+              {socialLinks.map((social) => (
                 <div key={social.label} className="relative">
                   <motion.button
                     variants={itemVariants}
@@ -290,16 +229,13 @@ export default function Footer() {
                       y: -2,
                       backgroundColor: "rgba(255,255,255,0.15)"
                     }}
-                    whileTap={{ scale: 0.95 }}
                     onClick={() => toggleDropdown(social.label)}
                     className="w-10 h-10 rounded-xl bg-white bg-opacity-10 flex items-center justify-center transition-all duration-300 hover:bg-opacity-20 backdrop-blur-sm border border-white border-opacity-20"
-                    aria-label={social.label}
                   >
                     <social.icon className="w-4 h-4" />
                     <ChevronDown className="w-3 h-3 ml-1 opacity-60" />
                   </motion.button>
 
-                  {/* Dropdown Menu */}
                   <AnimatePresence>
                     {activeDropdown === social.label && (
                       <motion.div
@@ -311,7 +247,7 @@ export default function Footer() {
                       >
                         <div className="p-2">
                           {social.options.length > 0 ? (
-                            social.options.map((option, optionIndex) => (
+                            social.options.map((option) => (
                               <motion.a
                                 key={option.name}
                                 href={option.href}
@@ -343,14 +279,16 @@ export default function Footer() {
             </div>
           </motion.div>
 
-          {/* Kolom 2 - Quick Links */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
+          {/* ✅ Kolom 2 */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
           <motion.div variants={itemVariants}>
             <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-300 rounded-full"></div>
               Navigasi Cepat
             </h4>
             <ul className="space-y-3">
-              {quickLinks.map((link, index) => (
+              {quickLinks.map((link) => (
                 <motion.li key={link.name} whileHover={{ x: 5 }}>
                   <Link 
                     href={link.href}
@@ -364,14 +302,16 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Kolom 3 - Program & Layanan */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
+          {/* ✅ Kolom 3 */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
           <motion.div variants={itemVariants}>
             <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-300 rounded-full"></div>
               Program Kami
             </h4>
             <ul className="space-y-3">
-              {programLinks.map((link, index) => (
+              {programLinks.map((link) => (
                 <motion.li key={link.name} whileHover={{ x: 5 }}>
                   <Link 
                     href={link.href}
@@ -385,7 +325,9 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Kolom 4 - Kontak Info */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
+          {/* ✅ Kolom 4 */}
+          {/* ------------------------------------------------------------------------------------------------------ */}
           <motion.div variants={itemVariants}>
             <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-300 rounded-full"></div>
@@ -393,27 +335,18 @@ export default function Footer() {
             </h4>
             
             <div className="space-y-4">
-              {/* Alamat */}
-              <motion.div 
-                className="flex items-start gap-3 group"
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-400 transition-colors border border-emerald-400">
+
+              <motion.div className="flex items-start gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center group-hover:bg-emerald-400 transition-colors border border-emerald-400">
                   <MapPin className="w-4 h-4 text-white" />
                 </div>
-                <div>
-                  <p className="text-green-100 text-sm leading-relaxed">
-                    {contact?.address || "Jl. Pendidikan No. 45, Cibinong, Bogor"}
-                  </p>
-                </div>
+                <p className="text-green-100 text-sm leading-relaxed">
+                  {contact?.address || "Jl. Pendidikan No. 45, Cibinong, Bogor"}
+                </p>
               </motion.div>
 
-              {/* Telepon */}
-              <motion.div 
-                className="flex items-center gap-3 group"
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-400 transition-colors border border-emerald-400">
+              <motion.div className="flex items-center gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center group-hover:bg-emerald-400 transition-colors border border-emerald-400">
                   <Phone className="w-4 h-4 text-white" />
                 </div>
                 <a 
@@ -424,12 +357,8 @@ export default function Footer() {
                 </a>
               </motion.div>
 
-              {/* Email */}
-              <motion.div 
-                className="flex items-center gap-3 group"
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-400 transition-colors border border-emerald-400">
+              <motion.div className="flex items-center gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center group-hover:bg-emerald-400 transition-colors border border-emerald-400">
                   <Mail className="w-4 h-4 text-white" />
                 </div>
                 <a 
@@ -440,26 +369,25 @@ export default function Footer() {
                 </a>
               </motion.div>
 
-              {/* Jam Operasional */}
-              <motion.div 
-                className="flex items-start gap-3 group"
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-400 transition-colors border border-emerald-400">
+              <motion.div className="flex items-start gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center group-hover:bg-emerald-400 transition-colors border border-emerald-400">
                   <Clock className="w-4 h-4 text-white" />
                 </div>
-                <div>
-                  <p className="text-green-100 text-sm">
-                    {contact?.office_hours || "Senin - Jumat: 07:00 - 16:00 WIB"}
-                  </p>
-                </div>
+                <p className="text-green-100 text-sm">
+                  {contact?.office_hours || "Senin - Jumat: 07:00 - 16:00 WIB"}
+                </p>
               </motion.div>
+
             </div>
           </motion.div>
+
         </motion.div>
       </div>
 
-      {/* Bottom Section */}
+      {/* ------------------------------------------------------------------------------------------------------ */}
+      {/* Bottom Footer */}
+      {/* ------------------------------------------------------------------------------------------------------ */}
+
       <div className="border-t border-green-500 border-opacity-30 bg-white">
         <div className="container mx-auto px-6 py-4">
           <motion.div
@@ -468,7 +396,6 @@ export default function Footer() {
             transition={{ duration: 0.6 }}
             className="flex flex-col md:flex-row justify-between items-center gap-3 text-center"
           >
-            {/* Copyright Section */}
             <div className="flex items-center gap-2 text-gray-600 text-sm">
               <span>© 2025</span>
               <span className="font-semibold text-green-700">
@@ -477,7 +404,6 @@ export default function Footer() {
               <span>All rights reserved</span>
             </div>
             
-            {/* Footer Text */}
             <div className="text-gray-600 text-sm">
               {settings?.footer_text || "Mendidik Generasi, Membangun Peradaban"}
             </div>
@@ -485,30 +411,19 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Floating Elements */}
+      {/* ------------------------------------------------------------------------------------------------------ */}
+      {/* Floating Decorations */}
+      {/* ------------------------------------------------------------------------------------------------------ */}
+
       <motion.div
-        animate={{
-          y: [0, -10, 0],
-          rotate: [0, 5, 0]
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
+        animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: [0.42, 0, 0.58, 1] }}
         className="absolute bottom-10 left-10 w-4 h-4 bg-emerald-300 rounded-full opacity-20"
       />
+
       <motion.div
-        animate={{
-          y: [0, 15, 0],
-          rotate: [0, -5, 0]
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: 1
-        }}
+        animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
+        transition={{ duration: 3, repeat: Infinity, ease: [0.42, 0, 0.58, 1], delay: 1 }}
         className="absolute top-20 right-20 w-3 h-3 bg-white rounded-full opacity-20"
       />
     </footer>
