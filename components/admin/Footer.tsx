@@ -102,7 +102,7 @@ export default function Footer() {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: [0.42, 0, 0.58, 1]
+        ease: "easeInOut",
       }
     }
   };
