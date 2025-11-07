@@ -1,14 +1,14 @@
 // pages/contact.tsx
 import Head from "next/head";
-import Navbar from "../components/admin/Navbar";
-import Footer from "../components/admin/Footer";
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabaseClient";
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Clock, Send, MessageCircle } from "lucide-react";
 import Image from "next/image";
+import Navbar from "../components/admin/Navbar";
+import Footer from "../components/admin/Footer";
 
-type ContactData = {
+interface ContactData {
   id?: string;
   address?: string;
   phone?: string;
@@ -17,12 +17,18 @@ type ContactData = {
   map_link?: string;
   office_hours?: string;
   whatsapp_message?: string;
-};
+}
+
+interface FormData {
+  name: string;
+  contact: string;
+  message: string;
+}
 
 export default function ContactPage() {
   const supabase = getSupabase();
   const [contact, setContact] = useState<ContactData | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     contact: "",
     message: ""
@@ -32,16 +38,34 @@ export default function ContactPage() {
 
   useEffect(() => {
     loadContact();
+    
     const channel = supabase
       .channel("realtime-contact")
-      .on("postgres_changes", { event: "*", schema: "public", table: "contact" }, () => loadContact())
+      .on(
+        "postgres_changes", 
+        { event: "*", schema: "public", table: "contact" }, 
+        loadContact
+      )
       .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, []);
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   async function loadContact() {
-    const { data } = await supabase.from("contact").select("*").limit(1).single();
-    setContact(data ?? null);
+    try {
+      const { data, error } = await supabase
+        .from("contact")
+        .select("*")
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      setContact(data ?? null);
+    } catch (error) {
+      console.error("Error loading contact data:", error);
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,18 +90,28 @@ export default function ContactPage() {
 
   const handleMapClick = () => {
     if (contact?.map_link) {
-      window.open(contact.map_link, '_blank');
+      window.open(contact.map_link, '_blank', 'noopener,noreferrer');
     } else if (contact?.address) {
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contact.address)}`;
-      window.open(mapsUrl, '_blank');
+      window.open(mapsUrl, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const getWhatsAppUrl = () => {
+    if (!contact?.phone) return "#";
+    const phoneNumber = contact.phone.replace(/\D/g, "");
+    const message = "Halo Yayasan Amalianur, saya ingin bertanya tentang:";
+    return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
   };
 
   return (
     <>
       <Head>
         <title>Kontak — Yayasan Amalianur</title>
-        <meta name="description" content="Hubungi Yayasan Amalianur untuk informasi lebih lanjut tentang program pendidikan dan kegiatan sosial kami." />
+        <meta 
+          name="description" 
+          content="Hubungi Yayasan Amalianur untuk informasi lebih lanjut tentang program pendidikan dan kegiatan sosial kami." 
+        />
       </Head>
 
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
@@ -126,7 +160,9 @@ export default function ContactPage() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-semibold text-green-800 text-sm md:text-base">Alamat</h3>
-                      <p className="text-gray-700 mt-1 text-sm md:text-base">{contact?.address || "Alamat belum diatur."}</p>
+                      <p className="text-gray-700 mt-1 text-sm md:text-base">
+                        {contact?.address || "Alamat belum diatur."}
+                      </p>
                     </div>
                   </div>
 
@@ -135,9 +171,11 @@ export default function ContactPage() {
                       <Phone className="text-white w-4 h-4 md:w-5 md:h-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-green-800 text-sm md:text-base">Telepon/WhatsApp</h3>
+                      <h3 className="font-semibold text-green-800 text-sm md:text-base">
+                        Telepon/WhatsApp
+                      </h3>
                       <a
-                        href={`https://wa.me/${contact?.phone?.replace(/\D/g, "")}`}
+                        href={getWhatsAppUrl()}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-gray-700 mt-1 hover:text-green-600 transition-colors block text-sm md:text-base break-all"
@@ -145,7 +183,9 @@ export default function ContactPage() {
                         {contact?.phone || "Nomor belum diatur"}
                       </a>
                       {contact?.whatsapp_message && (
-                        <p className="text-xs md:text-sm text-gray-600 mt-2">{contact.whatsapp_message}</p>
+                        <p className="text-xs md:text-sm text-gray-600 mt-2">
+                          {contact.whatsapp_message}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -170,7 +210,9 @@ export default function ContactPage() {
                       <Clock className="text-white w-4 h-4 md:w-5 md:h-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-green-800 text-sm md:text-base">Jam Operasional</h3>
+                      <h3 className="font-semibold text-green-800 text-sm md:text-base">
+                        Jam Operasional
+                      </h3>
                       <p className="text-gray-700 mt-1 text-sm md:text-base">
                         {contact?.office_hours || "Senin - Jumat: 08:00 - 16:00 WIB"}
                       </p>
@@ -181,12 +223,14 @@ export default function ContactPage() {
 
               {/* Quick Actions */}
               <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl shadow-lg p-6 md:p-8 text-white">
-                <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Butuh Bantuan Cepat?</h3>
-                <p className="opacity-90 mb-4 md:mb-6 text-sm md:text-base">Hubungi kami melalui WhatsApp untuk respon yang lebih cepat</p>
+                <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">
+                  Butuh Bantuan Cepat?
+                </h3>
+                <p className="opacity-90 mb-4 md:mb-6 text-sm md:text-base">
+                  Hubungi kami melalui WhatsApp untuk respon yang lebih cepat
+                </p>
                 <a
-                  href={`https://wa.me/${contact?.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(
-                    `Halo Yayasan Amalianur, saya ingin bertanya tentang:`
-                  )}`}
+                  href={getWhatsAppUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-white text-green-600 hover:bg-green-50 font-semibold py-3 px-4 md:px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl text-sm md:text-base w-full"
@@ -206,8 +250,12 @@ export default function ContactPage() {
                 transition={{ delay: 0.2 }}
                 className="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-green-100"
               >
-                <h2 className="text-xl md:text-2xl font-bold text-green-800 mb-2">Kirim Pesan</h2>
-                <p className="text-gray-600 mb-4 md:mb-6 text-sm md:text-base">Isi form berikut dan kami akan menghubungi Anda secepatnya</p>
+                <h2 className="text-xl md:text-2xl font-bold text-green-800 mb-2">
+                  Kirim Pesan
+                </h2>
+                <p className="text-gray-600 mb-4 md:mb-6 text-sm md:text-base">
+                  Isi form berikut dan kami akan menghubungi Anda secepatnya
+                </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                   <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
@@ -306,6 +354,13 @@ export default function ContactPage() {
                       <div 
                         className="cursor-pointer mx-auto max-w-md transition-transform duration-300 hover:scale-105"
                         onClick={handleMapClick}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            handleMapClick();
+                          }
+                        }}
                       >
                         <div className="relative overflow-hidden rounded-xl shadow-lg border-2 border-green-200">
                           <Image
@@ -325,6 +380,13 @@ export default function ContactPage() {
                     <div 
                       className="text-center py-8 md:py-12 cursor-pointer"
                       onClick={handleMapClick}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          handleMapClick();
+                        }
+                      }}
                     >
                       <div className="bg-gray-100 rounded-xl p-8 max-w-md mx-auto border-2 border-dashed border-gray-300 hover:border-green-400 transition-all duration-300">
                         <MapPin className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" />

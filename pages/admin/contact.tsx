@@ -4,12 +4,25 @@ import { useEffect, useState } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { getSupabase } from "../../lib/supabaseClient";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Mail, Clock, MessageCircle, Eye, EyeOff, Upload, X } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Eye, EyeOff, Upload, X } from "lucide-react";
 import Image from "next/image";
+
+interface ContactData {
+  id?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  map_image?: string;
+  map_link?: string;
+  office_hours?: string;
+  whatsapp_message?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export default function AdminContact() {
   const supabase = getSupabase();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ContactData | null>(null);
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -23,25 +36,44 @@ export default function AdminContact() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    load();
+    loadData();
+    
     const channel = supabase
       .channel("realtime-contact")
-      .on("postgres_changes", { event: "*", schema: "public", table: "contact" }, load)
+      .on(
+        "postgres_changes", 
+        { event: "*", schema: "public", table: "contact" }, 
+        loadData
+      )
       .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, []);
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
-  async function load() {
-    const { data } = await supabase.from("contact").select("*").limit(1).single();
-    if (data) {
-      setData(data);
-      setAddress(data.address || "");
-      setPhone(data.phone || "");
-      setEmail(data.email || "");
-      setMapImage(data.map_image || "");
-      setMapLink(data.map_link || "");
-      setOfficeHours(data.office_hours || "");
-      setWhatsappMessage(data.whatsapp_message || "");
+  async function loadData() {
+    try {
+      const { data, error } = await supabase
+        .from("contact")
+        .select("*")
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setData(data);
+        setAddress(data.address || "");
+        setPhone(data.phone || "");
+        setEmail(data.email || "");
+        setMapImage(data.map_image || "");
+        setMapLink(data.map_link || "");
+        setOfficeHours(data.office_hours || "");
+        setWhatsappMessage(data.whatsapp_message || "");
+      }
+    } catch (error) {
+      console.error("Error loading contact data:", error);
     }
   }
 
@@ -66,34 +98,51 @@ export default function AdminContact() {
         .getPublicUrl(filePath);
 
       setMapImage(publicUrl);
-      setUploading(false);
     } catch (error) {
       console.error('Error uploading image:', error);
+    } finally {
       setUploading(false);
     }
   }
 
   async function save() {
     setLoading(true);
-    const contactData = {
-      address,
-      phone,
-      email,
-      map_image: mapImage,
-      map_link: mapLink,
-      office_hours: officeHours,
-      whatsapp_message: whatsappMessage
-    };
+    try {
+      const contactData = {
+        address,
+        phone,
+        email,
+        map_image: mapImage,
+        map_link: mapLink,
+        office_hours: officeHours,
+        whatsapp_message: whatsappMessage,
+        updated_at: new Date().toISOString()
+      };
 
-    if (data?.id) {
-      await supabase.from("contact").update(contactData).eq("id", data.id);
-    } else {
-      await supabase.from("contact").insert([contactData]);
+      if (data?.id) {
+        const { error } = await supabase
+          .from("contact")
+          .update(contactData)
+          .eq("id", data.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("contact")
+          .insert([contactData]);
+        
+        if (error) throw error;
+      }
+      
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      await loadData();
+    } catch (error) {
+      console.error("Error saving contact data:", error);
+      alert("Gagal menyimpan data!");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-    load();
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,10 +160,16 @@ export default function AdminContact() {
     <AdminLayout>
       <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4"
+        >
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-green-700">Pengaturan Kontak</h2>
-            <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Kelola informasi kontak dan lokasi yayasan</p>
+            <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">
+              Kelola informasi kontak dan lokasi yayasan
+            </p>
           </div>
           <button
             onClick={() => setShowPreview(!showPreview)}
@@ -127,13 +182,21 @@ export default function AdminContact() {
 
         <div className="grid lg:grid-cols-2 gap-6 md:gap-8">
           {/* Form Section */}
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 md:space-y-6">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }} 
+            animate={{ opacity: 1, x: 0 }} 
+            className="space-y-4 md:space-y-6"
+          >
             <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg border border-green-100">
-              <h3 className="text-lg md:text-xl font-semibold text-green-800 mb-3 md:mb-4">Informasi Dasar</h3>
+              <h3 className="text-lg md:text-xl font-semibold text-green-800 mb-3 md:mb-4">
+                Informasi Dasar
+              </h3>
               
               <div className="space-y-3 md:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Alamat Lengkap</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Alamat Lengkap
+                  </label>
                   <textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
@@ -145,7 +208,9 @@ export default function AdminContact() {
 
                 <div className="grid md:grid-cols-2 gap-3 md:gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nomor Telepon/WhatsApp</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nomor Telepon/WhatsApp
+                    </label>
                     <input
                       type="text"
                       value={phone}
@@ -156,7 +221,9 @@ export default function AdminContact() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Alamat Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Alamat Email
+                    </label>
                     <input
                       type="email"
                       value={email}
@@ -168,7 +235,9 @@ export default function AdminContact() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Jam Operasional</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Jam Operasional
+                  </label>
                   <input
                     type="text"
                     value={officeHours}
@@ -179,7 +248,9 @@ export default function AdminContact() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pesan WhatsApp Default</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pesan WhatsApp Default
+                  </label>
                   <input
                     type="text"
                     value={whatsappMessage}
@@ -192,11 +263,15 @@ export default function AdminContact() {
             </div>
 
             <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg border border-green-100">
-              <h3 className="text-lg md:text-xl font-semibold text-green-800 mb-3 md:mb-4">Lokasi & Peta</h3>
+              <h3 className="text-lg md:text-xl font-semibold text-green-800 mb-3 md:mb-4">
+                Lokasi & Peta
+              </h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Link Google Maps</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Link Google Maps
+                  </label>
                   <input
                     type="url"
                     value={mapLink}
@@ -204,17 +279,23 @@ export default function AdminContact() {
                     placeholder="https://maps.google.com/..."
                     className="w-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 p-3 rounded-xl outline-none transition-all text-sm md:text-base"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Link yang akan dibuka ketika gambar QR code diklik</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Link yang akan dibuka ketika gambar QR code diklik
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Gambar QR Code Maps</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Gambar QR Code Maps
+                  </label>
                   
                   {mapImage ? (
                     <div className="space-y-3">
                       <div className="relative border-2 border-green-200 rounded-xl p-4 bg-green-50">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm font-medium text-green-800">Gambar saat ini:</span>
+                          <span className="text-sm font-medium text-green-800">
+                            Gambar saat ini:
+                          </span>
                           <button
                             onClick={removeImage}
                             className="text-red-500 hover:text-red-700 transition-colors"
@@ -239,7 +320,9 @@ export default function AdminContact() {
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 transition-colors">
                       <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">Upload QR code Google Maps</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Upload QR code Google Maps
+                      </p>
                       <p className="text-xs text-gray-500 mb-3">
                         Format: JPG, PNG, WebP. Ukuran disarankan: 400x400px
                       </p>
@@ -290,9 +373,15 @@ export default function AdminContact() {
 
           {/* Preview Section */}
           {showPreview && (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 md:space-y-6">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              className="space-y-4 md:space-y-6"
+            >
               <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg border border-green-100">
-                <h3 className="text-lg md:text-xl font-semibold text-green-800 mb-3 md:mb-4">Preview Halaman Publik</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-green-800 mb-3 md:mb-4">
+                  Preview Halaman Publik
+                </h3>
                 
                 <div className="space-y-3 md:space-y-4">
                   {/* Info Cards Preview */}
@@ -303,7 +392,9 @@ export default function AdminContact() {
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-semibold text-green-800 text-xs md:text-sm">Alamat</h4>
-                        <p className="text-gray-700 text-xs md:text-sm mt-1">{address || "Alamat belum diatur"}</p>
+                        <p className="text-gray-700 text-xs md:text-sm mt-1">
+                          {address || "Alamat belum diatur"}
+                        </p>
                       </div>
                     </div>
 
@@ -312,8 +403,12 @@ export default function AdminContact() {
                         <Phone className="text-white w-3 h-3 md:w-4 md:h-4" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-semibold text-green-800 text-xs md:text-sm">Telepon/WhatsApp</h4>
-                        <p className="text-gray-700 text-xs md:text-sm mt-1">{phone || "Nomor belum diatur"}</p>
+                        <h4 className="font-semibold text-green-800 text-xs md:text-sm">
+                          Telepon/WhatsApp
+                        </h4>
+                        <p className="text-gray-700 text-xs md:text-sm mt-1">
+                          {phone || "Nomor belum diatur"}
+                        </p>
                         {whatsappMessage && (
                           <p className="text-xs text-gray-600 mt-1">{whatsappMessage}</p>
                         )}
@@ -326,7 +421,9 @@ export default function AdminContact() {
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-semibold text-green-800 text-xs md:text-sm">Email</h4>
-                        <p className="text-gray-700 text-xs md:text-sm mt-1">{email || "Email belum diatur"}</p>
+                        <p className="text-gray-700 text-xs md:text-sm mt-1">
+                          {email || "Email belum diatur"}
+                        </p>
                       </div>
                     </div>
 
@@ -335,7 +432,9 @@ export default function AdminContact() {
                         <Clock className="text-white w-3 h-3 md:w-4 md:h-4" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-semibold text-green-800 text-xs md:text-sm">Jam Operasional</h4>
+                        <h4 className="font-semibold text-green-800 text-xs md:text-sm">
+                          Jam Operasional
+                        </h4>
                         <p className="text-gray-700 text-xs md:text-sm mt-1">
                           {officeHours || "Jam operasional belum diatur"}
                         </p>
@@ -345,8 +444,12 @@ export default function AdminContact() {
 
                   {/* Quick Action Preview */}
                   <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl p-3 md:p-4 text-white">
-                    <h4 className="font-semibold text-xs md:text-sm mb-2">Butuh Bantuan Cepat?</h4>
-                    <p className="text-xs opacity-90 mb-3">Hubungi kami melalui WhatsApp untuk respon yang lebih cepat</p>
+                    <h4 className="font-semibold text-xs md:text-sm mb-2">
+                      Butuh Bantuan Cepat?
+                    </h4>
+                    <p className="text-xs opacity-90 mb-3">
+                      Hubungi kami melalui WhatsApp untuk respon yang lebih cepat
+                    </p>
                     <div className="bg-white text-green-600 text-xs font-semibold py-2 px-3 md:px-4 rounded-lg text-center">
                       Chat WhatsApp
                     </div>

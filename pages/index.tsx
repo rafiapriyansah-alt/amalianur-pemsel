@@ -1,52 +1,124 @@
 // pages/index.tsx
 import Head from "next/head";
-import Navbar from "../components/admin/Navbar";
-import Footer from "../components/admin/Footer";
-import Hero from "../components/admin/Hero";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { getSupabase } from "../lib/supabaseClient";
 import { ChevronRight, Calendar, User } from "lucide-react";
+import Navbar from "../components/admin/Navbar";
+import Footer from "../components/admin/Footer";
+import Hero from "../components/admin/Hero";
+
+interface HomeData {
+  id?: string;
+  hero_title?: string;
+  hero_subtitle?: string;
+  hero_image?: string;
+  welcome_message?: string;
+  kepala_photo?: string;
+  kepala_name?: string;
+  ttd_photo?: string;
+  kb_title?: string;
+  kb_desc?: string;
+  kb_image?: string;
+  tk_title?: string;
+  tk_desc?: string;
+  tk_image?: string;
+  mts_title?: string;
+  mts_desc?: string;
+  mts_image?: string;
+}
+
+interface NewsItem {
+  id: string;
+  title: string;
+  excerpt?: string;
+  content?: string;
+  image_url?: string;
+  published_at?: string;
+  author?: string;
+  created_at?: string;
+}
+
+interface EducationItem {
+  key: string;
+  title: string;
+  desc: string;
+  img: string;
+  link: string;
+}
 
 export default function Home() {
   const supabase = getSupabase();
-  const [home, setHome] = useState<any>(null);
-  const [news, setNews] = useState<any[]>([]);
+  const [home, setHome] = useState<HomeData | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [currentEduIndex, setCurrentEduIndex] = useState(0);
+  const [newsPosition, setNewsPosition] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  const newsContainerRef = useRef<HTMLDivElement>(null);
+  const newsItemRef = useRef<HTMLDivElement>(null);
+  const [dragStartX, setDragStartX] = useState(0);
 
   useEffect(() => {
-    const load = async () => {
-      const { data: homeData } = await supabase.from("home").select("*").single();
-      setHome(homeData ?? null);
+    // Check if window is defined (client-side)
+    if (typeof window !== 'undefined') {
+      setIsMobile(window.innerWidth < 768);
+      
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
 
-      const { data: posts } = await supabase
-        .from("posts")
-        .select("*")
-        .order("published_at", { ascending: false })
-        .limit(8);
-      setNews(posts ?? []);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const { data: homeData } = await supabase.from("home").select("*").single();
+        setHome(homeData ?? null);
+
+        const { data: posts } = await supabase
+          .from("posts")
+          .select("*")
+          .order("published_at", { ascending: false })
+          .limit(8);
+        setNews(posts ?? []);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
     };
 
-    load();
+    loadData();
 
     const homeSub = supabase
       .channel("home-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "home" }, load)
+      .on(
+        "postgres_changes", 
+        { event: "*", schema: "public", table: "home" }, 
+        loadData
+      )
       .subscribe();
 
     const postSub = supabase
       .channel("posts-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, load)
+      .on(
+        "postgres_changes", 
+        { event: "*", schema: "public", table: "posts" }, 
+        loadData
+      )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(homeSub);
-      supabase.removeChannel(postSub);
+      homeSub.unsubscribe();
+      postSub.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
-  // === Slider Pendidikan ===
-  const educationItems = [
+  // Education items data
+  const educationItems: EducationItem[] = [
     {
       key: "kb",
       title: home?.kb_title || "Kelompok Bermain (KB)",
@@ -70,23 +142,15 @@ export default function Home() {
     },
   ];
 
-  const [currentEduIndex, setCurrentEduIndex] = useState(0);
-
   // Auto slide pendidikan ke kanan setiap 5 detik hanya untuk mobile
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
     if (!isMobile) return;
 
     const timer = setInterval(() => {
       setCurrentEduIndex((prev) => (prev + 1) % educationItems.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [educationItems.length]);
-
-  // === Slider Berita ===
-  const [newsPosition, setNewsPosition] = useState(0);
-  const newsContainerRef = useRef<HTMLDivElement>(null);
-  const newsItemRef = useRef<HTMLDivElement>(null);
+  }, [educationItems.length, isMobile]);
 
   // Auto slide berita ke kiri
   useEffect(() => {
@@ -109,7 +173,7 @@ export default function Home() {
   }, [news.length]);
 
   // Format tanggal
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Tanggal tidak tersedia';
     try {
       return new Date(dateString).toLocaleDateString('id-ID', {
@@ -133,8 +197,6 @@ export default function Home() {
   };
 
   // Handle drag untuk mobile slider pendidikan
-  const [dragStartX, setDragStartX] = useState(0);
-
   const handleTouchStart = (e: React.TouchEvent) => {
     setDragStartX(e.touches[0].clientX);
   };
@@ -153,6 +215,14 @@ export default function Home() {
     }
   };
 
+  // Prepare hero images - convert single image to array
+  const getHeroImages = (): string[] => {
+    if (home?.hero_image) {
+      return [home.hero_image];
+    }
+    return ['/images/hero-default.jpg']; // Fallback image
+  };
+
   return (
     <>
       <Head>
@@ -167,7 +237,7 @@ export default function Home() {
           <Hero
             title={home?.hero_title}
             subtitle={home?.hero_subtitle}
-            image={home?.hero_image}
+            images={getHeroImages()} // Changed from image to images
           />
 
           {/* Ucapan Kepala Yayasan */}
@@ -240,7 +310,7 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                 {educationItems.map((item, i) => (
                   <motion.div
-                    key={i}
+                    key={item.key}
                     initial={{ 
                       opacity: 0, 
                       x: i === 0 ? -50 : i === 2 ? 50 : 0,
@@ -301,7 +371,7 @@ export default function Home() {
                   >
                     {educationItems.map((item, i) => (
                       <div
-                        key={i}
+                        key={item.key}
                         className="w-full flex-shrink-0 px-4"
                       >
                         <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-500 border border-green-100 h-full flex flex-col">
@@ -346,6 +416,7 @@ export default function Home() {
                           ? 'bg-green-600 w-8' 
                           : 'bg-green-300 hover:bg-green-400'
                       }`}
+                      aria-label={`Go to slide ${i + 1}`}
                     />
                   ))}
                 </div>
@@ -383,9 +454,9 @@ export default function Home() {
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   >
-                    {news.map((item: any, i: number) => (
+                    {news.map((item, i) => (
                       <div
-                        key={item.id || i}
+                        key={item.id}
                         ref={i === 0 ? newsItemRef : null}
                         className="flex-shrink-0 w-[280px] md:w-[320px]"
                       >
@@ -431,7 +502,7 @@ export default function Home() {
                             </p>
                             
                             <Link
-                              href={`/news/${item.id || ""}`}
+                              href={`/news/${item.id}`}
                               className="inline-flex items-center text-green-600 hover:text-green-700 font-semibold text-sm transition-colors duration-200 group/link mt-auto"
                             >
                               Baca Selengkapnya
@@ -456,6 +527,7 @@ export default function Home() {
                             ? 'bg-green-600 w-6' 
                             : 'bg-green-300 hover:bg-green-400'
                         }`}
+                        aria-label={`Go to news slide ${i + 1}`}
                       />
                     ))}
                   </div>

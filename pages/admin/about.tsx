@@ -1,172 +1,256 @@
-"use client";
-import { useEffect, useState } from "react";
-import AdminLayout from "../../components/admin/AdminLayout";
+// pages/admin/about.tsx
+import { useState, useEffect } from "react";
 import { getSupabase } from "../../lib/supabaseClient";
-import { uploadImageFile } from "../../utils/upload";
+import dynamic from "next/dynamic";
 
-export default function AdminAbout() {
+// Dynamically import ReactQuill dengan proper typing
+const ReactQuill = dynamic(() => import("react-quill"), { 
+  ssr: false,
+  loading: () => <p>Loading editor...</p>
+});
+import "react-quill/dist/quill.snow.css";
+
+interface AboutData {
+  id?: string;
+  title?: string;
+  content?: string;
+  vision?: string;
+  mission?: string;
+  history?: string;
+  updated_at?: string;
+}
+
+export default function AboutAdmin() {
   const supabase = getSupabase();
-  const [form, setForm] = useState({
-    id: "",
-    title: "",
-    content: "",
-    vision: "",
-    mission: "",
-    values: "",
-    image_url: "",
-  });
+  const [about, setAbout] = useState<AboutData | null>(null);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Ambil data awal
-  async function loadData() {
-    const { data } = await supabase.from("about").select("*").limit(1).single();
-    if (data) setForm(data);
-  }
+  // Load data function
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("about")
+        .select("*")
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        setAbout(data);
+      } else {
+        // Initialize empty about data if doesn't exist
+        setAbout({
+          title: "",
+          content: "",
+          vision: "",
+          mission: "",
+          history: ""
+        });
+      }
+    } catch (error) {
+      console.error("Error loading about data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
 
     // Listener realtime supaya halaman publik ikut update otomatis
-    const channel = supabase
+    const aboutSub = supabase
       .channel("about-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "about" },
-        () => loadData()
+        loadData
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, []);
+    // Cleanup function
+    return () => {
+      aboutSub.unsubscribe();
+    };
+  }, [supabase]);
 
-  // Upload gambar
-  async function handleUpload(e: any) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = await uploadImageFile(file, "about");
-    if (url) setForm({ ...form, image_url: url });
-  }
-
-  // Simpan perubahan
-  async function handleSave() {
+  const handleSave = async () => {
+    if (!about) return;
+    
     setSaving(true);
-    const { error } = await supabase
-      .from("about")
-      .upsert({ ...form, updated_at: new Date() }, { onConflict: "id" });
+    try {
+      // Cek apakah data sudah ada
+      const { data: existingData } = await supabase
+        .from("about")
+        .select("id")
+        .single();
 
-    setSaving(false);
-    if (error) alert("❌ Gagal menyimpan: " + error.message);
-    else alert("✅ Data berhasil disimpan!");
-  }
+      if (existingData) {
+        // Update existing data
+        const { error } = await supabase
+          .from("about")
+          .update({
+            title: about.title,
+            content: about.content,
+            vision: about.vision,
+            mission: about.mission,
+            history: about.history,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existingData.id);
 
-  return (
-    <AdminLayout>
-      <div className="bg-white rounded-xl shadow-lg p-8">
-        <h2 className="text-2xl font-bold text-green-700 mb-6">
-          Tentang Yayasan Amalianur
-        </h2>
+        if (error) throw error;
+      } else {
+        // Insert new data
+        const { error } = await supabase
+          .from("about")
+          .insert([
+            {
+              title: about.title,
+              content: about.content,
+              vision: about.vision,
+              mission: about.mission,
+              history: about.history
+            }
+          ]);
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* FORM */}
-          <div className="space-y-4">
-            <div>
-              <label className="font-semibold">Judul</label>
-              <input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+        if (error) throw error;
+      }
 
-            <div>
-              <label className="font-semibold">Deskripsi</label>
-              <textarea
-                value={form.content}
-                onChange={(e) => setForm({ ...form, content: e.target.value })}
-                className="w-full border rounded-lg p-2 h-24 focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+      alert("Data berhasil disimpan!");
+    } catch (error) {
+      console.error("Error saving about data:", error);
+      alert("Gagal menyimpan data!");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-            <div>
-              <label className="font-semibold">Visi</label>
-              <textarea
-                value={form.vision}
-                onChange={(e) => setForm({ ...form, vision: e.target.value })}
-                className="w-full border rounded-lg p-2 h-20 focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+  const handleChange = (field: keyof AboutData, value: string) => {
+    setAbout((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
-            <div>
-              <label className="font-semibold">Misi</label>
-              <textarea
-                value={form.mission}
-                onChange={(e) => setForm({ ...form, mission: e.target.value })}
-                className="w-full border rounded-lg p-2 h-20 focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+  // Quill modules configuration
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      [{ indent: "-1" }, { indent: "+1" }],
+      ["link", "image"],
+      ["clean"]
+    ]
+  };
 
-            <div>
-              <label className="font-semibold">Nilai-Nilai Yayasan</label>
-              <textarea
-                value={form.values}
-                onChange={(e) => setForm({ ...form, values: e.target.value })}
-                className="w-full border rounded-lg p-2 h-20 focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+  const simpleQuillModules = {
+    toolbar: [
+      ["bold", "italic", "underline"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link"],
+      ["clean"]
+    ]
+  };
 
-            <div>
-              <label className="font-semibold">Gambar Yayasan</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUpload}
-                className="mt-1"
-              />
-              {form.image_url && (
-                <img
-                  src={form.image_url}
-                  alt="Preview"
-                  className="mt-3 w-full rounded-xl shadow-md max-h-64 object-cover border"
-                />
-              )}
-            </div>
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg shadow mt-4 transition-all"
-            >
-              {saving ? "Menyimpan..." : "💾 Simpan Perubahan"}
-            </button>
-          </div>
-
-          {/* PREVIEW */}
-          <div className="bg-gray-50 border rounded-xl p-5 shadow-inner">
-            <h3 className="text-lg font-bold text-green-700 mb-3">
-              Preview Halaman Publik
-            </h3>
-            <h4 className="font-semibold text-xl mb-1">{form.title}</h4>
-            <p className="text-gray-700 mb-3">{form.content}</p>
-
-            {form.image_url && (
-              <img
-                src={form.image_url}
-                className="rounded-xl w-full max-h-64 object-cover mb-3"
-              />
-            )}
-
-            <p>
-              <b>Visi:</b> {form.vision}
-            </p>
-            <p>
-              <b>Misi:</b> {form.mission}
-            </p>
-            <p>
-              <b>Nilai-Nilai:</b> {form.values}
-            </p>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
+            <div className="h-4 bg-gray-300 rounded w-full mb-2"></div>
+            <div className="h-4 bg-gray-300 rounded w-5/6 mb-2"></div>
+            <div className="h-4 bg-gray-300 rounded w-4/6"></div>
           </div>
         </div>
       </div>
-    </AdminLayout>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">
+          Kelola Halaman Tentang Kami
+        </h1>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Judul Halaman</h2>
+          <input
+            type="text"
+            value={about?.title || ""}
+            onChange={(e) => handleChange("title", e.target.value)}
+            placeholder="Masukkan judul halaman tentang kami"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Konten Utama</h2>
+          {typeof window !== 'undefined' && (
+            <ReactQuill
+              value={about?.content || ""}
+              onChange={(value) => handleChange("content", value)}
+              theme="snow"
+              modules={quillModules}
+              className="h-64 mb-12"
+            />
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Visi</h2>
+          {typeof window !== 'undefined' && (
+            <ReactQuill
+              value={about?.vision || ""}
+              onChange={(value) => handleChange("vision", value)}
+              theme="snow"
+              modules={simpleQuillModules}
+              className="h-48 mb-12"
+            />
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Misi</h2>
+          {typeof window !== 'undefined' && (
+            <ReactQuill
+              value={about?.mission || ""}
+              onChange={(value) => handleChange("mission", value)}
+              theme="snow"
+              modules={simpleQuillModules}
+              className="h-48 mb-12"
+            />
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Sejarah</h2>
+          {typeof window !== 'undefined' && (
+            <ReactQuill
+              value={about?.history || ""}
+              onChange={(value) => handleChange("history", value)}
+              theme="snow"
+              modules={quillModules}
+              className="h-64 mb-12"
+            />
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? "Menyimpan..." : "Simpan Perubahan"}
+          </button>
+
+        </div>
+      </div>
+    </div>
   );
 }
