@@ -2,8 +2,9 @@ import "@/styles/globals.css";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabaseClient";
+import type { AppProps } from "next/app";
 
-function MyApp({ Component, pageProps }) {
+function MyApp({ Component, pageProps }: AppProps) {
   const supabase = getSupabase();
   const [settings, setSettings] = useState<any>(null);
 
@@ -17,14 +18,20 @@ function MyApp({ Component, pageProps }) {
     // Realtime listener
     const settingsSub = supabase
       .channel("settings-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, async () => {
-        const { data } = await supabase.from("settings").select("*").single();
-        setSettings(data ?? null);
-      })
+      .on(
+        "postgres_changes", 
+        { event: "*", schema: "public", table: "settings" }, 
+        async () => {
+          const { data } = await supabase.from("settings").select("*").single();
+          setSettings(data ?? null);
+        }
+      )
       .subscribe();
 
-    return () => supabase.removeChannel(settingsSub);
-  }, []);
+    return () => {
+      supabase.removeChannel(settingsSub);
+    };
+  }, [supabase]);
 
   return (
     <>
