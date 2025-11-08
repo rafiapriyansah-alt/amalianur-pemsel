@@ -32,16 +32,20 @@ export default function Hero({
   const timerRef = useRef<number | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Parallax + zoom efek saat scroll
+  // Enhanced parallax + zoom effects
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
 
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.25]);
-  const y = useTransform(scrollYProgress, [0, 1], [0, -120]);
-  const brightness = useTransform(scrollYProgress, [0, 1], [1, 0.85]);
+  // More pronounced parallax effects for mobile
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.4]); // Increased scale for mobile
+  const y = useTransform(scrollYProgress, [0, 1], [0, -180]); // Increased parallax
+  const brightness = useTransform(scrollYProgress, [0, 1], [1, 0.8]);
   const brightnessFilter = useTransform(brightness, (b) => `brightness(${b})`);
+
+  // Wave parallax effect
+  const waveY = useTransform(scrollYProgress, [0, 1], [0, 40]);
 
   // Ambil data dari Supabase (sinkron otomatis)
   useEffect(() => {
@@ -133,14 +137,14 @@ export default function Hero({
       ref={sectionRef}
       className="relative h-screen flex items-center justify-center overflow-hidden"
     >
-      {/* Background dengan efek parallax */}
+      {/* Background dengan efek parallax yang lebih kuat */}
       <div className="absolute inset-0">
         {currentImage ? (
           <motion.div
             key={currentImage}
             style={{ scale, y, filter: brightnessFilter }}
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: ready ? 1 : 0, scale: 1.15 }}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: ready ? 1 : 0, scale: 1 }}
             transition={{ duration: 1.2, ease: "easeInOut" }}
             className="absolute inset-0 bg-center bg-cover will-change-transform"
           >
@@ -150,6 +154,8 @@ export default function Hero({
                 backgroundImage: `url(${currentImage})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
+                // Enhanced scaling for mobile
+                transform: "scale(1.1)", // Slightly zoomed in for mobile
               }}
             />
           </motion.div>
@@ -166,13 +172,13 @@ export default function Hero({
       />
 
       {/* Konten Hero */}
-      <div className="relative z-10 text-center px-6 sm:px-12 max-w-3xl">
+      <div className="relative z-10 text-center px-4 sm:px-6 md:px-12 max-w-3xl mx-auto">
         {/* Judul tetap warna aslinya (hijau) */}
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-green-700 leading-tight drop-shadow-[0_3px_4px_rgba(0,0,0,0.3)]"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-green-700 leading-tight drop-shadow-[0_3px_4px_rgba(0,0,0,0.3)] px-4"
         >
           {title ?? "Selamat Datang di Yayasan Amalianur"}
         </motion.h1>
@@ -182,7 +188,7 @@ export default function Hero({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-6 text-2xl font-semibold text-white drop-shadow-[0_3px_4px_rgba(0,0,0,0.4)] max-w-2xl mx-auto"
+          className="mt-4 sm:mt-6 text-lg sm:text-xl md:text-2xl font-semibold text-white drop-shadow-[0_3px_4px_rgba(0,0,0,0.4)] max-w-2xl mx-auto px-4"
         >
           {subtitle ?? "Membangun Generasi Islami dan Berakhlak Mulia"}
         </motion.p>
@@ -191,27 +197,30 @@ export default function Hero({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="mt-8 flex gap-4 justify-center"
+          className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4"
         >
           <a
             href="/about"
-            className="bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-green-800 transition"
+            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow hover:bg-green-800 transition w-full sm:w-auto text-center text-sm sm:text-base"
           >
             Tentang Kami
           </a>
           <a
             href="/news"
-            className="bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-green-800 transition"
+            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow hover:bg-green-800 transition w-full sm:w-auto text-center text-sm sm:text-base"
           >
             Berita
           </a>
         </motion.div>
       </div>
 
-      {/* Wave bawah */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]">
+      {/* Wave bawah dengan efek parallax */}
+      <motion.div 
+        style={{ y: waveY }}
+        className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] z-20"
+      >
         <svg
-          className="relative block w-full h-20 sm:h-28 text-white/60"
+          className="relative block w-full h-16 sm:h-20 md:h-24 text-white/60"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 1440 320"
           preserveAspectRatio="none"
@@ -222,7 +231,7 @@ export default function Hero({
             d="M0,160L48,186.7C96,213,192,267,288,277.3C384,288,480,256,576,213.3C672,171,768,117,864,117.3C960,117,1056,171,1152,192C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
           />
         </svg>
-      </div>
+      </motion.div>
     </section>
   );
 }

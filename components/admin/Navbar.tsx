@@ -1,9 +1,39 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { HiOutlineMenu, HiX, HiChevronDown, HiChevronRight } from "react-icons/hi";
+import { HiX, HiChevronDown, HiChevronRight } from "react-icons/hi";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSupabase } from "../../lib/supabaseClient";
+
+// New hamburger icon component
+const HamburgerIcon = ({ isOpen }: { isOpen: boolean }) => (
+  <div className="relative w-6 h-6 flex flex-col justify-between">
+    <motion.span
+      className="w-full h-0.5 bg-green-700 rounded-full block"
+      animate={{ 
+        rotate: isOpen ? 45 : 0, 
+        y: isOpen ? 8 : 0 
+      }}
+      transition={{ duration: 0.3 }}
+    />
+    <motion.span
+      className="w-full h-0.5 bg-green-700 rounded-full block"
+      animate={{ 
+        opacity: isOpen ? 0 : 1,
+        scale: isOpen ? 0 : 1 
+      }}
+      transition={{ duration: 0.3 }}
+    />
+    <motion.span
+      className="w-full h-0.5 bg-green-700 rounded-full block"
+      animate={{ 
+        rotate: isOpen ? -45 : 0, 
+        y: isOpen ? -8 : 0 
+      }}
+      transition={{ duration: 0.3 }}
+    />
+  </div>
+);
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -14,8 +44,15 @@ export default function Navbar() {
   const [mobileEducationOpen, setMobileEducationOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => {
+      const isScrolled = window.scrollY > 10;
+      setScrolled(isScrolled);
+    };
+    
+    // Set initial scroll state
+    handleScroll();
+    
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -71,31 +108,31 @@ export default function Navbar() {
   return (
     <header
       className={`fixed w-full top-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-white shadow-md" : "bg-white/90 backdrop-blur-sm"
+        scrolled || open ? "bg-white shadow-md" : "bg-white/95 backdrop-blur-sm"
       }`}
     >
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
         {/* LOGO */}
         <div className="flex items-center gap-3">
           {logo ? (
             <img
               src={logo}
               alt="Logo Yayasan"
-              className="w-12 h-12 rounded-lg object-cover shadow-sm"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover shadow-sm"
             />
           ) : (
-            <div className="">
-              
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">YA</span>
             </div>
           )}
           <div>
-            <div className="font-bold text-green-800">{siteName}</div>
+            <div className="font-bold text-green-800 text-sm sm:text-base">{siteName}</div>
             <div className="text-xs text-gray-500">Pematang Seleng</div>
           </div>
         </div>
 
         {/* DESKTOP MENU */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-6 text-sm font-medium text-gray-700">
           {menuItems.map((item, i) => (
             <motion.div
               key={i}
@@ -124,7 +161,7 @@ export default function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-green-100 overflow-hidden"
+                        className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-green-100 overflow-hidden z-50"
                       >
                         {item.dropdown.map((dropdownItem, index) => (
                           <Link
@@ -152,15 +189,19 @@ export default function Navbar() {
           ))}
           <Link
             href="/pendaftaran"
-            className="bg-green-600 text-white px-3 py-2 rounded-lg shadow hover:bg-green-700 transition-colors duration-300"
+            className="bg-green-600 text-white px-3 py-2 rounded-lg shadow hover:bg-green-700 transition-colors duration-300 text-sm"
           >
             Daftar
           </Link>
         </nav>
 
-        {/* TOGGLE MOBILE */}
-        <button className="md:hidden p-2 text-green-700" onClick={() => setOpen(true)}>
-          <HiOutlineMenu size={24} />
+        {/* TOGGLE MOBILE dengan icon baru */}
+        <button 
+          className="md:hidden p-2 text-green-700 focus:outline-none"
+          onClick={() => setOpen(true)}
+          aria-label="Toggle menu"
+        >
+          <HamburgerIcon isOpen={open} />
         </button>
       </div>
 
@@ -187,12 +228,31 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 80, damping: 15 }}
-              className="absolute right-0 top-0 w-72 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
+              className="absolute right-0 top-0 w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-green-700">Menu</h2>
-                <button onClick={() => setOpen(false)} className="text-green-700 hover:text-green-800 transition-colors">
-                  <HiX size={26} />
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt="Logo Yayasan"
+                      className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">YA</span>
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-bold text-green-800 text-sm">{siteName}</div>
+                    <div className="text-xs text-gray-500">Pematang Seleng</div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setOpen(false)} 
+                  className="text-green-700 hover:text-green-800 transition-colors p-1"
+                >
+                  <HiX size={24} />
                 </button>
               </div>
 
@@ -204,7 +264,7 @@ export default function Navbar() {
                   hidden: { opacity: 0 },
                   show: { opacity: 1, transition: { staggerChildren: 0.08 } },
                 }}
-                className="flex flex-col"
+                className="flex flex-col flex-1 overflow-y-auto"
               >
                 {menuItems.map((item, i) => (
                   <motion.div
@@ -220,7 +280,7 @@ export default function Navbar() {
                       <div className="py-3">
                         <button
                           onClick={() => setMobileEducationOpen(!mobileEducationOpen)}
-                          className="flex items-center justify-between w-full text-gray-800 text-lg font-medium hover:text-green-600 transition-colors"
+                          className="flex items-center justify-between w-full text-gray-800 text-base font-medium hover:text-green-600 transition-colors py-2"
                         >
                           <span>{item.name}</span>
                           <HiChevronRight 
@@ -244,7 +304,7 @@ export default function Navbar() {
                                     key={index}
                                     href={dropdownItem.href}
                                     onClick={() => setOpen(false)}
-                                    className="block py-2 text-gray-600 text-base hover:text-green-600 transition-colors border-l-2 border-green-200 pl-3 hover:border-green-400"
+                                    className="block py-2 text-gray-600 text-sm hover:text-green-600 transition-colors border-l-2 border-green-200 pl-3 hover:border-green-400"
                                   >
                                     {dropdownItem.name}
                                   </Link>
@@ -259,7 +319,7 @@ export default function Navbar() {
                       <Link
                         href={item.href}
                         onClick={() => setOpen(false)}
-                        className="block py-3 text-gray-800 text-lg font-medium hover:text-green-600 transition-colors"
+                        className="block py-3 text-gray-800 text-base font-medium hover:text-green-600 transition-colors"
                       >
                         {item.name}
                       </Link>
@@ -271,12 +331,12 @@ export default function Navbar() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="pt-4"
+                  className="pt-6 mt-auto"
                 >
                   <Link
                     href="/pendaftaran"
                     onClick={() => setOpen(false)}
-                    className="block text-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition-all duration-300"
+                    className="block text-center bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg shadow transition-all duration-300 font-semibold"
                   >
                     Daftar Sekarang
                   </Link>
