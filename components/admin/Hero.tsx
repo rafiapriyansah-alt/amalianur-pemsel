@@ -33,10 +33,11 @@ export default function Hero({
   const timerRef = useRef<number | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Deteksi device type
+  // Deteksi device type dengan improved logic
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
     };
     
     checkMobile();
@@ -44,27 +45,27 @@ export default function Hero({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Parallax + zoom efek saat scroll - HANYA untuk desktop
+  // Parallax + zoom efek dengan adjustment untuk mobile
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
 
-  // Smooth spring animation untuk desktop
+  // Smooth spring animation
   const smoothScroll = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001
   });
 
-  // Transform effects - HANYA aktif di desktop
-  const scale = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1 : 1.25]);
-  const y = useTransform(smoothScroll, [0, 1], [0, isMobile ? 0 : -120]);
-  const brightness = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1 : 0.85]);
+  // Transform effects - Disesuaikan untuk mobile
+  const scale = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1.1 : 1.25]);
+  const y = useTransform(smoothScroll, [0, 1], [0, isMobile ? -50 : -120]);
+  const brightness = useTransform(smoothScroll, [0, 1], [1, isMobile ? 0.9 : 0.85]);
   const brightnessFilter = useTransform(brightness, (b) => `brightness(${b})`);
 
-  // Wave animation - smooth untuk semua device
-  const waveY = useTransform(smoothScroll, [0, 1], [0, isMobile ? 10 : 20]);
+  // Wave animation - lebih halus di mobile
+  const waveY = useTransform(smoothScroll, [0, 1], [0, isMobile ? 8 : 20]);
 
   // Ambil data dari Supabase (sinkron otomatis)
   useEffect(() => {
@@ -156,7 +157,7 @@ export default function Hero({
       ref={sectionRef}
       className="relative h-screen flex items-center justify-center overflow-hidden"
     >
-      {/* Background dengan efek parallax HANYA di desktop */}
+      {/* Background dengan efek parallax yang disesuaikan */}
       <div className="absolute inset-0">
         {currentImage ? (
           <motion.div
@@ -180,6 +181,7 @@ export default function Hero({
                 backgroundImage: `url(${currentImage})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
               }}
             />
           </motion.div>
@@ -195,44 +197,41 @@ export default function Hero({
         }`}
       />
 
-      {/* Konten Hero - TIDAK berubah dari original */}
-      <div className="relative z-10 text-center px-6 sm:px-12 max-w-3xl">
-        {/* Judul tetap warna aslinya (hijau) */}
+      {/* Konten Hero */}
+      <div className="relative z-10 text-center px-4 sm:px-6 md:px-12 max-w-3xl mx-auto w-full">
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-green-700 leading-tight drop-shadow-[0_3px_4px_rgba(0,0,0,0.3)]"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-green-700 leading-tight drop-shadow-[0_3px_4px_rgba(0,0,0,0.3)] px-2"
         >
           {title ?? "Selamat Datang di Yayasan Amalianur"}
         </motion.h1>
 
-        {/* Subjudul warna putih */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-6 text-2xl font-semibold text-white drop-shadow-[0_3px_4px_rgba(0,0,0,0.4)] max-w-2xl mx-auto"
+          className="mt-4 sm:mt-6 text-lg sm:text-xl md:text-2xl font-semibold text-white drop-shadow-[0_3px_4px_rgba(0,0,0,0.4)] max-w-2xl mx-auto px-2"
         >
           {subtitle ?? "Membangun Generasi Islami dan Berakhlak Mulia"}
         </motion.p>
 
-        {/* Tombol - TIDAK diubah dari original */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="mt-8 flex gap-4 justify-center"
+          className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-2"
         >
           <a
             href="/about"
-            className="bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-green-800 transition"
+            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-full sm:w-auto text-center"
           >
             Tentang Kami
           </a>
           <a
             href="/news"
-            className="bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-green-800 transition"
+            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-full sm:w-auto text-center"
           >
             Berita
           </a>
@@ -247,7 +246,7 @@ export default function Hero({
         }}
       >
         <svg
-          className="relative block w-full h-20 sm:h-28 text-white/60"
+          className="relative block w-full h-16 sm:h-20 md:h-28 text-white/60"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 1440 320"
           preserveAspectRatio="none"

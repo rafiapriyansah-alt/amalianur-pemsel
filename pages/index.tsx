@@ -67,14 +67,13 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setIsMobile(window.innerWidth < 768);
-      
-      const handleResize = () => {
+      const checkMobile = () => {
         setIsMobile(window.innerWidth < 768);
       };
       
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
     }
   }, []);
 
@@ -163,9 +162,9 @@ export default function Home() {
     const timer = setInterval(() => {
       setNewsPosition((prev) => {
         const containerWidth = newsContainerRef.current?.offsetWidth || 0;
-        const itemWidth = newsItemRef.current?.offsetWidth || 300;
-        const gap = 24;
-        const itemsPerView = Math.floor(containerWidth / (itemWidth + gap));
+        const itemWidth = 280; // Fixed width untuk konsistensi
+        const gap = 16;
+        const itemsPerView = Math.max(1, Math.floor(containerWidth / (itemWidth + gap)));
         const maxPosition = Math.max(0, news.length - itemsPerView);
         
         const newPosition = prev + 1;
@@ -250,18 +249,18 @@ export default function Home() {
     if (dragDistance > threshold) {
       // Swipe ke kiri - next
       const containerWidth = newsContainerRef.current?.offsetWidth || 0;
-      const itemWidth = newsItemRef.current?.offsetWidth || 300;
-      const gap = 24;
-      const itemsPerView = Math.floor(containerWidth / (itemWidth + gap));
+      const itemWidth = 280;
+      const gap = 16;
+      const itemsPerView = Math.max(1, Math.floor(containerWidth / (itemWidth + gap)));
       const maxPosition = Math.max(0, news.length - itemsPerView);
       
       setNewsPosition(prev => prev >= maxPosition ? 0 : prev + 1);
     } else if (dragDistance < -threshold) {
       // Swipe ke kanan - previous
       const containerWidth = newsContainerRef.current?.offsetWidth || 0;
-      const itemWidth = newsItemRef.current?.offsetWidth || 300;
-      const gap = 24;
-      const itemsPerView = Math.floor(containerWidth / (itemWidth + gap));
+      const itemWidth = 280;
+      const gap = 16;
+      const itemsPerView = Math.max(1, Math.floor(containerWidth / (itemWidth + gap)));
       const maxPosition = Math.max(0, news.length - itemsPerView);
       
       setNewsPosition(prev => prev <= 0 ? maxPosition : prev - 1);
@@ -278,6 +277,13 @@ export default function Home() {
     return ['/images/hero-default.jpg'];
   };
 
+  // Calculate items per view untuk news slider
+  const getNewsItemsPerView = () => {
+    if (!isMobile) return 3;
+    const containerWidth = newsContainerRef.current?.offsetWidth || 0;
+    return Math.max(1, Math.floor(containerWidth / 296)); // 280px + 16px gap
+  };
+
   return (
     <>
       <Head>
@@ -286,7 +292,7 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
 
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden">
         <Navbar />
         <main className="flex-1">
           {/* Hero */}
@@ -415,13 +421,14 @@ export default function Home() {
 
             {/* Mobile View - Slider dengan Touch Support */}
             <div className="md:hidden">
-              <div className="relative max-w-4xl mx-auto">
+              <div className="relative max-w-4xl mx-auto px-2">
                 {/* Slider Wrapper */}
                 <div className="overflow-hidden rounded-2xl">
                   <motion.div
                     ref={eduSliderRef}
                     className="flex"
-                    animate={{ x: `-${currentEduIndex * 100}%` }}
+                    style={{ width: `${educationItems.length * 100}%` }}
+                    animate={{ x: `-${(currentEduIndex * 100) / educationItems.length}%` }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     onTouchStart={handleEduTouchStart}
                     onTouchMove={handleEduTouchMove}
@@ -431,6 +438,7 @@ export default function Home() {
                       <div
                         key={item.key}
                         className="w-full flex-shrink-0 px-2"
+                        style={{ width: `${100 / educationItems.length}%` }}
                       >
                         <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-500 border border-green-100 h-full flex flex-col">
                           <div className="relative h-48 overflow-hidden flex-shrink-0">
@@ -503,13 +511,14 @@ export default function Home() {
                 {/* Slider Container */}
                 <div 
                   ref={newsContainerRef}
-                  className="overflow-hidden px-2 md:px-4"
+                  className="overflow-hidden px-2 md:px-4 max-w-full"
                 >
                   <motion.div
                     ref={newsSliderRef}
                     className="flex gap-4 md:gap-6"
+                    style={{ width: `${news.length * 280}px` }}
                     animate={{ 
-                      x: `-${newsPosition * ((newsItemRef.current?.offsetWidth || 280) + 16)}px` 
+                      x: `-${newsPosition * 296}px` // 280px + 16px gap
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     onTouchStart={handleNewsTouchStart}
@@ -520,7 +529,7 @@ export default function Home() {
                       <div
                         key={item.id}
                         ref={i === 0 ? newsItemRef : null}
-                        className="flex-shrink-0 w-[260px] md:w-[320px]"
+                        className="flex-shrink-0 w-[280px] md:w-[320px]"
                       >
                         <motion.article
                           initial={{ opacity: 0, y: 20 }}
@@ -578,9 +587,9 @@ export default function Home() {
                 </div>
 
                 {/* Dots Indicator untuk Berita */}
-                {news.length > (isMobile ? 1 : 3) && (
+                {news.length > getNewsItemsPerView() && (
                   <div className="flex justify-center gap-1 md:gap-2 mt-6 md:mt-8">
-                    {Array.from({ length: Math.max(1, Math.min(6, news.length - (isMobile ? 1 : 3))) }).map((_, i) => (
+                    {Array.from({ length: Math.max(1, news.length - getNewsItemsPerView() + 1) }).map((_, i) => (
                       <button
                         key={i}
                         onClick={() => goToNewsSlide(i)}
