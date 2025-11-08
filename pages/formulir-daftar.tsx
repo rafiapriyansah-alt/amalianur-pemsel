@@ -40,6 +40,13 @@ interface FormulirData {
   form_description: string;
   success_title: string;
   success_message: string;
+  telepon_admin?: string;
+  email_admin?: string;
+}
+
+interface KontakAdmin {
+  telepon_admin: string;
+  email_admin: string;
 }
 
 export default function FormulirDaftar() {
@@ -60,7 +67,14 @@ export default function FormulirDaftar() {
     form_title: "Data Calon Siswa/Santri",
     form_description: "Lengkapi informasi berikut untuk proses pendaftaran",
     success_title: "Pendaftaran Berhasil!",
-    success_message: "Terima kasih {nama} telah mendaftar di Yayasan Amalinaur. Data Anda telah kami terima dan akan segera diproses. Admin kami akan menghubungi Anda dalam 1-2 hari kerja melalui nomor telepon {telepon} atau email {email} untuk informasi lebih lanjut."
+    success_message: "Terima kasih {nama} telah mendaftar di Yayasan Amalinaur. Data Anda telah kami terima dan akan segera diproses. Admin kami akan menghubungi Anda dalam 1-2 hari kerja melalui nomor telepon {telepon} atau email {email} untuk informasi lebih lanjut.",
+    telepon_admin: "081234567890",
+    email_admin: "info@yayasanamalinaur.sch.id"
+  });
+
+  const [kontakAdmin, setKontakAdmin] = useState<KontakAdmin>({
+    telepon_admin: "081234567890",
+    email_admin: "info@yayasanamalinaur.sch.id"
   });
 
   const [formData, setFormData] = useState({
@@ -114,6 +128,12 @@ export default function FormulirDaftar() {
         
         if (formulir) {
           setFormulirData(formulir);
+          
+          // Set kontak admin dari data formulir
+          setKontakAdmin({
+            telepon_admin: formulir.telepon_admin || "081234567890",
+            email_admin: formulir.email_admin || "info@yayasanamalinaur.sch.id"
+          });
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -146,6 +166,11 @@ export default function FormulirDaftar() {
         (payload: any) => {
           if (payload.new) {
             setFormulirData(payload.new);
+            // Update juga kontak admin saat ada perubahan
+            setKontakAdmin({
+              telepon_admin: payload.new.telepon_admin || "081234567890",
+              email_admin: payload.new.email_admin || "info@yayasanamalinaur.sch.id"
+            });
           }
         }
       )
@@ -366,8 +391,8 @@ export default function FormulirDaftar() {
   const formatSuccessMessage = () => {
     return formulirData.success_message
       .replace(/{nama}/g, formData.nama)
-      .replace(/{telepon}/g, formData.telepon)
-      .replace(/{email}/g, formData.email || "yang telah didaftarkan");
+      .replace(/{telepon}/g, kontakAdmin.telepon_admin)
+      .replace(/{email}/g, kontakAdmin.email_admin);
   };
 
   // Icon untuk jenjang
@@ -421,23 +446,21 @@ export default function FormulirDaftar() {
                 <h4 className="font-semibold text-green-800 mb-2">Hubungi Kami:</h4>
                 <div className="space-y-2">
                   <a 
-                    href={`https://wa.me/62${formData.telepon_ortu.replace(/\D/g, '').substring(1)}`}
+                    href={`https://wa.me/62${kontakAdmin.telepon_admin.replace(/\D/g, '').substring(1)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 text-green-700 hover:text-green-800 transition-colors bg-white px-3 py-2 rounded-lg border border-green-200"
                   >
                     <FaWhatsapp className="text-green-500" /> 
-                    {formData.telepon_ortu}
+                    {kontakAdmin.telepon_admin}
                   </a>
-                  {formData.email && (
-                    <a 
-                      href={`mailto:${formData.email}`}
-                      className="flex items-center justify-center gap-2 text-green-700 hover:text-green-800 transition-colors bg-white px-3 py-2 rounded-lg border border-green-200"
-                    >
-                      <FaEnvelope className="text-green-500" /> 
-                      {formData.email}
-                    </a>
-                  )}
+                  <a 
+                    href={`mailto:${kontakAdmin.email_admin}`}
+                    className="flex items-center justify-center gap-2 text-green-700 hover:text-green-800 transition-colors bg-white px-3 py-2 rounded-lg border border-green-200"
+                  >
+                    <FaEnvelope className="text-green-500" /> 
+                    {kontakAdmin.email_admin}
+                  </a>
                 </div>
               </div>
 

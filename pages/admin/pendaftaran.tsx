@@ -52,6 +52,8 @@ interface FormulirPendaftaran {
   form_description: string;
   success_title: string;
   success_message: string;
+  telepon_admin?: string;
+  email_admin?: string;
 }
 
 interface PengaturanPendaftaran {
@@ -108,7 +110,9 @@ export default function AdminDaftar() {
     form_title: "Data Calon Siswa/Santri",
     form_description: "Lengkapi informasi berikut untuk proses pendaftaran",
     success_title: "Pendaftaran Berhasil!",
-    success_message: "Terima kasih {nama} telah mendaftar di Yayasan Amalinaur. Data Anda telah kami terima dan akan segera diproses. Admin kami akan menghubungi Anda dalam 1-2 hari kerja melalui nomor telepon {telepon} atau email {email} untuk informasi lebih lanjut."
+    success_message: "Terima kasih {nama} telah mendaftar di Yayasan Amalinaur. Data Anda telah kami terima dan akan segera diproses. Admin kami akan menghubungi Anda dalam 1-2 hari kerja melalui nomor telepon {telepon} atau email {email} untuk informasi lebih lanjut.",
+    telepon_admin: "081234567890",
+    email_admin: "info@yayasanamalinaur.sch.id"
   });
 
   const [pengaturan, setPengaturan] = useState<PengaturanPendaftaran>({
@@ -190,7 +194,9 @@ export default function AdminDaftar() {
             form_title: formulirPendaftaran.form_title,
             form_description: formulirPendaftaran.form_description,
             success_title: formulirPendaftaran.success_title,
-            success_message: formulirPendaftaran.success_message
+            success_message: formulirPendaftaran.success_message,
+            telepon_admin: formulirPendaftaran.telepon_admin,
+            email_admin: formulirPendaftaran.email_admin
           }])
           .select()
           .single();
@@ -251,8 +257,6 @@ export default function AdminDaftar() {
   // Realtime listener
   useEffect(() => {
     loadAll();
-
-    
 
     const ch1 = supabase
       .channel("daftar-realtime-admin")
@@ -349,7 +353,7 @@ export default function AdminDaftar() {
     };
   }, []);
 
-  // Save halaman pendaftaran - DIPERBAIKI
+  // Save halaman pendaftaran
   async function saveHalamanPendaftaran() {
     setLoading(true);
     setStatus(null);
@@ -403,7 +407,7 @@ export default function AdminDaftar() {
     }
   }
 
-  // Save formulir pendaftaran - DIPERBAIKI
+  // Save formulir pendaftaran
   async function saveFormulirPendaftaran() {
     setLoading(true);
     setStatus(null);
@@ -421,7 +425,9 @@ export default function AdminDaftar() {
             form_title: formulirPendaftaran.form_title,
             form_description: formulirPendaftaran.form_description,
             success_title: formulirPendaftaran.success_title,
-            success_message: formulirPendaftaran.success_message
+            success_message: formulirPendaftaran.success_message,
+            telepon_admin: formulirPendaftaran.telepon_admin,
+            email_admin: formulirPendaftaran.email_admin
           })
           .eq("id", formulirPendaftaran.id);
         
@@ -436,7 +442,9 @@ export default function AdminDaftar() {
             form_title: formulirPendaftaran.form_title,
             form_description: formulirPendaftaran.form_description,
             success_title: formulirPendaftaran.success_title,
-            success_message: formulirPendaftaran.success_message
+            success_message: formulirPendaftaran.success_message,
+            telepon_admin: formulirPendaftaran.telepon_admin,
+            email_admin: formulirPendaftaran.email_admin
           }]);
         
         error = insertError;
@@ -455,7 +463,7 @@ export default function AdminDaftar() {
     }
   }
 
-  // Save pengaturan - DIPERBAIKI
+  // Save pengaturan
   async function savePengaturan() {
     setLoading(true);
     setStatus(null);
@@ -499,7 +507,7 @@ export default function AdminDaftar() {
     }
   }
 
-  // 💾 Save biaya pendaftaran - DIPERBAIKI & STABIL
+  // Save biaya pendaftaran
 async function saveBiayaPendaftaran() {
   setLoading(true);
   setStatus(null);
@@ -508,10 +516,8 @@ async function saveBiayaPendaftaran() {
     const supabase = getSupabase();
     let error = null;
 
-    // 🧩 Pastikan kita tahu apakah ada data yang sudah ada di tabel
     let biayaId = biayaPendaftaran.id;
 
-    // Jika ID kosong, coba ambil ID record yang sudah ada (karena seharusnya hanya 1 baris)
     if (!biayaId) {
       const { data: existing, error: fetchError } = await supabase
         .from("biaya_pendaftaran")
@@ -526,7 +532,6 @@ async function saveBiayaPendaftaran() {
       }
     }
 
-    // 🛠️ Jika ada ID (berarti data sudah ada) → lakukan UPDATE
     if (biayaId) {
       const { error: updateError } = await supabase
         .from("biaya_pendaftaran")
@@ -535,13 +540,12 @@ async function saveBiayaPendaftaran() {
           biaya_kb: biayaPendaftaran.biaya_kb,
           biaya_tk: biayaPendaftaran.biaya_tk,
           biaya_mts: biayaPendaftaran.biaya_mts,
-          updated_at: new Date(), // penting: agar urutan data tetap baru
+          updated_at: new Date(),
         })
         .eq("id", biayaId);
 
       error = updateError;
     } 
-    // 🟡 Jika sama sekali belum ada data → lakukan INSERT pertama kali
     else {
       const { error: insertError } = await supabase
         .from("biaya_pendaftaran")
@@ -558,11 +562,10 @@ async function saveBiayaPendaftaran() {
       error = insertError;
     }
 
-    // 🚨 Jika error, lempar ke catch
     if (error) throw error;
 
     setStatus("✅ Biaya pendaftaran berhasil disimpan");
-    await loadAll(); // Reload data supaya state.id & harga terbaru tersimpan
+    await loadAll();
 
   } catch (error: any) {
     console.error("Save error:", error);
@@ -571,7 +574,6 @@ async function saveBiayaPendaftaran() {
     setLoading(false);
   }
 }
-
 
   // Toggle status pendaftaran
   async function togglePendaftaran() {
@@ -591,7 +593,7 @@ async function saveBiayaPendaftaran() {
     }
   }
 
-  // Fungsi upload gambar yang DIPERBAIKI
+  // Fungsi upload gambar
   async function handleUploadHalaman(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -627,7 +629,7 @@ async function saveBiayaPendaftaran() {
 
       const imageUrl = publicURL.publicUrl;
 
-      // Update database - DIPERBAIKI: Gunakan update tanpa ID jika ID kosong
+      // Update database
       let updateError;
       if (halamanPendaftaran.id) {
         const { error } = await supabase
@@ -662,7 +664,7 @@ async function saveBiayaPendaftaran() {
     }
   }
 
-  // Hapus pendaftar - DIPERBAIKI: Handle foreign key constraint
+  // Hapus pendaftar
   async function deletePendaftar(id: string, nama: string) {
     if (!confirm(`Yakin ingin menghapus data "${nama}"? Tindakan ini tidak dapat dibatalkan!`)) return;
     
@@ -706,7 +708,7 @@ async function saveBiayaPendaftaran() {
     }
   }
 
-  // Hapus semua pendaftar - DIPERBAIKI
+  // Hapus semua pendaftar
   async function deleteSemua() {
     if (pendaftarList.length === 0) {
       alert("Tidak ada data untuk dihapus");
@@ -1069,10 +1071,10 @@ async function saveBiayaPendaftaran() {
                 </div>
               </div>
 
-              {/* Success Message */}
+              {/* Success Message & Kontak Admin */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <FaCheckCircle /> Pesan Sukses
+                  <FaCheckCircle /> Pesan Sukses & Kontak Admin
                 </h3>
                 
                 <div className="space-y-4">
@@ -1099,6 +1101,47 @@ async function saveBiayaPendaftaran() {
                     <p className="text-sm text-gray-500 mt-1">
                       Gunakan {"{nama}"}, {"{telepon}"}, {"{email}"} untuk variabel dinamis
                     </p>
+                  </div>
+
+                  {/* Field Kontak Admin */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Telepon Admin (WhatsApp)
+                      </label>
+                      <input 
+                        type="text" 
+                        value={formulirPendaftaran.telepon_admin || ""} 
+                        onChange={(e) => setFormulirPendaftaran({
+                          ...formulirPendaftaran, 
+                          telepon_admin: e.target.value
+                        })} 
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="081234567890"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        Nomor yang akan ditampilkan di pesan sukses
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email Admin
+                      </label>
+                      <input 
+                        type="email" 
+                        value={formulirPendaftaran.email_admin || ""} 
+                        onChange={(e) => setFormulirPendaftaran({
+                          ...formulirPendaftaran, 
+                          email_admin: e.target.value
+                        })} 
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="admin@yayasanamalinaur.sch.id"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        Email yang akan ditampilkan di pesan sukses
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
