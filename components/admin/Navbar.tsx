@@ -22,9 +22,7 @@ export default function Navbar() {
       setScrolled(isScrolled);
     };
     
-    // Trigger initial check
     handleScroll();
-    
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -42,7 +40,6 @@ export default function Navbar() {
     };
     load();
 
-    // 🔹 Realtime update
     const sub = supabase
       .channel("settings-navbar")
       .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, async () => {
@@ -72,6 +69,7 @@ export default function Navbar() {
     }, 200);
   };
 
+  // Menu items yang lebih ringkas untuk tablet
   const menuItems = [
     { name: "Home", href: "/" },
     { name: "Tentang", href: "/about" },
@@ -87,11 +85,9 @@ export default function Navbar() {
     { name: "Program", href: "/programs" },
     { name: "Galeri", href: "/galeri" },
     { name: "Berita", href: "/news" },
-    { name: "Testimoni", href: "/testimonials" },
     { name: "Kontak", href: "/contact" },
   ];
 
-  // Variants untuk animasi hamburger icon
   const menuIconVariants = {
     open: { rotate: 90, scale: 1.1 },
     closed: { rotate: 0, scale: 1 }
@@ -115,30 +111,30 @@ export default function Navbar() {
         scrolled || open ? "bg-white shadow-md" : "bg-white/95 backdrop-blur-md"
       }`}
     >
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        {/* LOGO */}
-        <div className="flex items-center gap-3">
+      <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        {/* LOGO - Diperkecil untuk tablet */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           {logo ? (
             <motion.img
               src={logo}
               alt="Logo Yayasan"
-              className="w-12 h-12 rounded-lg object-cover shadow-sm"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover shadow-sm"
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             />
           ) : (
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
               <span className="text-white font-bold text-xs">YA</span>
             </div>
           )}
-          <div>
-            <div className="font-bold text-green-800 text-lg">{siteName}</div>
-            <div className="text-xs text-gray-500">Pematang Seleng</div>
+          <div className="hidden sm:block">
+            <div className="font-bold text-green-800 text-lg leading-tight">{siteName}</div>
+            <div className="text-xs text-gray-500 leading-tight">Pematang Seleng</div>
           </div>
         </div>
 
-        {/* DESKTOP MENU */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700">
+        {/* DESKTOP & TABLET MENU - Dioptimalkan untuk iPad */}
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-sm font-medium text-gray-700">
           {menuItems.map((item, i) => (
             <motion.div
               key={i}
@@ -153,7 +149,7 @@ export default function Navbar() {
                   onMouseEnter={handleEducationMouseEnter}
                   onMouseLeave={handleEducationMouseLeave}
                 >
-                  <button className="flex items-center gap-1 px-3 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50">
+                  <button className="flex items-center gap-1 px-2 xl:px-3 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 whitespace-nowrap">
                     {item.name}
                     <motion.div
                       animate={{ rotate: educationOpen ? 180 : 0 }}
@@ -162,7 +158,7 @@ export default function Navbar() {
                       <HiChevronDown className="text-sm" />
                     </motion.div>
                   </button>
-                  <span className="absolute left-3 bottom-0 w-0 h-0.5 bg-green-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] rounded-full"></span>
+                  <span className="absolute left-2 xl:left-3 bottom-0 w-0 h-0.5 bg-green-400 transition-all duration-300 group-hover:w-[calc(100%-16px)] xl:group-hover:w-[calc(100%-24px)] rounded-full"></span>
                   
                   {/* Dropdown Menu */}
                   <AnimatePresence>
@@ -198,28 +194,145 @@ export default function Navbar() {
                 // Menu biasa
                 <Link
                   href={item.href}
-                  className="px-3 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 block relative"
+                  className="px-2 xl:px-3 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 block relative whitespace-nowrap"
                 >
                   {item.name}
-                  <span className="absolute left-3 bottom-0 w-0 h-0.5 bg-green-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] rounded-full"></span>
+                  <span className="absolute left-2 xl:left-3 bottom-0 w-0 h-0.5 bg-green-400 transition-all duration-300 group-hover:w-[calc(100%-16px)] xl:group-hover:w-[calc(100%-24px)] rounded-full"></span>
                 </Link>
               )}
             </motion.div>
           ))}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link
-              href="/pendaftaran"
-              className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium"
+          
+          {/* CTA Buttons - Dioptimalkan untuk tablet */}
+          <div className="flex items-center gap-2 ml-2">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Daftar
-            </Link>
-          </motion.div>
+              <Link
+                href="/donasi"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 xl:px-4 py-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-sm whitespace-nowrap"
+              >
+                Donasi
+              </Link>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                href="/pendaftaran"
+                className="bg-gradient-to-r from-green-600 to-green-700 text-white px-3 xl:px-4 py-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-sm whitespace-nowrap"
+              >
+                Daftar
+              </Link>
+            </motion.div>
+          </div>
         </nav>
 
-        {/* TOGGLE MOBILE - Hamburger Icon dengan Animasi */}
+        {/* TABLET MENU (768px - 1024px) - Menu yang lebih ringkas */}
+        <nav className="hidden md:flex lg:hidden items-center gap-3 text-sm font-medium text-gray-700">
+          {/* Menu penting saja untuk tablet */}
+          {menuItems.slice(0, 4).map((item, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative group"
+            >
+              {item.dropdown ? (
+                // Dropdown untuk Pendidikan di tablet
+                <div 
+                  className="relative"
+                  onMouseEnter={handleEducationMouseEnter}
+                  onMouseLeave={handleEducationMouseLeave}
+                >
+                  <button className="flex items-center gap-1 px-2 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 whitespace-nowrap text-xs">
+                    {item.name}
+                    <HiChevronDown className="text-xs" />
+                  </button>
+                  
+                  <AnimatePresence>
+                    {educationOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-green-100 overflow-hidden z-50"
+                        onMouseEnter={handleEducationMouseEnter}
+                        onMouseLeave={handleEducationMouseLeave}
+                      >
+                        {item.dropdown.map((dropdownItem, index) => (
+                          <Link
+                            key={index}
+                            href={dropdownItem.href}
+                            className="block px-3 py-2 text-xs text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors border-b border-green-50 last:border-b-0"
+                          >
+                            {dropdownItem.name}
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <Link
+                  href={item.href}
+                  className="px-2 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 block relative whitespace-nowrap text-xs"
+                >
+                  {item.name}
+                </Link>
+              )}
+            </motion.div>
+          ))}
+          
+          {/* More dropdown untuk menu lainnya */}
+          <div className="relative group">
+            <button className="flex items-center gap-1 px-2 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 whitespace-nowrap text-xs">
+              Lainnya
+              <HiChevronDown className="text-xs" />
+            </button>
+            <div className="absolute top-full left-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-green-100 overflow-hidden z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              {menuItems.slice(4).map((item, index) => (
+                <Link
+                  key={index}
+                  href={item.href}
+                  className="block px-3 py-2 text-xs text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors border-b border-green-50 last:border-b-0"
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA Buttons untuk tablet */}
+          <div className="flex items-center gap-2 ml-1">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                href="/donasi"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-2 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-xs whitespace-nowrap"
+              >
+                Donasi
+              </Link>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                href="/pendaftaran"
+                className="bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-2 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-xs whitespace-nowrap"
+              >
+                Daftar
+              </Link>
+            </motion.div>
+          </div>
+        </nav>
+
+        {/* MOBILE MENU TOGGLE - Tampil di tablet kecil dan mobile */}
         <motion.button 
           className="md:hidden p-2 text-green-700 relative z-60"
           onClick={() => setOpen(!open)}
@@ -250,7 +363,7 @@ export default function Navbar() {
         </motion.button>
       </div>
 
-      {/* SIDEBAR MOBILE */}
+      {/* SIDEBAR MOBILE - Dioptimalkan untuk tablet */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -278,7 +391,7 @@ export default function Navbar() {
                 damping: 30,
                 mass: 0.8
               }}
-              className="absolute right-0 top-0 w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
+              className="absolute right-0 top-0 w-80 md:w-96 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
             >
               {/* Header Sidebar */}
               <motion.div 
@@ -300,7 +413,7 @@ export default function Navbar() {
                     </div>
                   )}
                   <div>
-                    <div className="font-bold text-green-800">{siteName}</div>
+                    <div className="font-bold text-green-800 text-lg">{siteName}</div>
                     <div className="text-xs text-gray-500">Pematang Seleng</div>
                   </div>
                 </div>
@@ -349,7 +462,6 @@ export default function Navbar() {
                     className="border-b border-green-100/50"
                   >
                     {item.dropdown ? (
-                      // Dropdown untuk Pendidikan di mobile
                       <div className="py-3">
                         <motion.button
                           onClick={() => setMobileEducationOpen(!mobileEducationOpen)}
@@ -365,7 +477,6 @@ export default function Navbar() {
                           </motion.div>
                         </motion.button>
                         
-                        {/* Submenu Pendidikan */}
                         <AnimatePresence>
                           {mobileEducationOpen && (
                             <motion.div
@@ -401,7 +512,6 @@ export default function Navbar() {
                         </AnimatePresence>
                       </div>
                     ) : (
-                      // Menu biasa di mobile
                       <motion.div whileTap={{ scale: 0.98 }}>
                         <Link
                           href={item.href}
@@ -416,13 +526,25 @@ export default function Navbar() {
                 ))}
               </motion.nav>
 
-              {/* CTA Button */}
+              {/* CTA Buttons di sidebar */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="pt-6 border-t border-green-100/50"
+                className="pt-6 border-t border-green-100/50 space-y-3"
               >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Link
+                    href="/donasi"
+                    onClick={() => setOpen(false)}
+                    className="block text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3.5 rounded-lg shadow-lg transition-all duration-300 font-medium"
+                  >
+                    Donasi Sekarang
+                  </Link>
+                </motion.div>
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
