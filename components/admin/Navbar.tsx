@@ -203,31 +203,18 @@ export default function Navbar() {
             </motion.div>
           ))}
           
-          {/* CTA Buttons - Dioptimalkan untuk tablet */}
-          <div className="flex items-center gap-2 ml-2">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          {/* CTA Button - Hanya Daftar saja */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Link
+              href="/pendaftaran"
+              className="bg-gradient-to-r from-green-600 to-green-700 text-white px-3 xl:px-4 py-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-sm whitespace-nowrap"
             >
-              <Link
-                href="/donasi"
-                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 xl:px-4 py-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-sm whitespace-nowrap"
-              >
-                Donasi
-              </Link>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link
-                href="/pendaftaran"
-                className="bg-gradient-to-r from-green-600 to-green-700 text-white px-3 xl:px-4 py-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-sm whitespace-nowrap"
-              >
-                Daftar
-              </Link>
-            </motion.div>
-          </div>
+              Daftar
+            </Link>
+          </motion.div>
         </nav>
 
         {/* TABLET MENU (768px - 1024px) - Menu yang lebih ringkas */}
@@ -305,31 +292,18 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* CTA Buttons untuk tablet */}
-          <div className="flex items-center gap-2 ml-1">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          {/* CTA Button untuk tablet - Hanya Daftar saja */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Link
+              href="/pendaftaran"
+              className="bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-2 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-xs whitespace-nowrap"
             >
-              <Link
-                href="/donasi"
-                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-2 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-xs whitespace-nowrap"
-              >
-                Donasi
-              </Link>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link
-                href="/pendaftaran"
-                className="bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-2 rounded-lg shadow hover:shadow-lg transition-all duration-300 font-medium text-xs whitespace-nowrap"
-              >
-                Daftar
-              </Link>
-            </motion.div>
-          </div>
+              Daftar
+            </Link>
+          </motion.div>
         </nav>
 
         {/* MOBILE MENU TOGGLE - Tampil di tablet kecil dan mobile */}
@@ -526,25 +500,13 @@ export default function Navbar() {
                 ))}
               </motion.nav>
 
-              {/* CTA Buttons di sidebar */}
+              {/* CTA Button di sidebar - Hanya Daftar saja */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="pt-6 border-t border-green-100/50 space-y-3"
+                className="pt-6 border-t border-green-100/50"
               >
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Link
-                    href="/donasi"
-                    onClick={() => setOpen(false)}
-                    className="block text-center bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3.5 rounded-lg shadow-lg transition-all duration-300 font-medium"
-                  >
-                    Donasi Sekarang
-                  </Link>
-                </motion.div>
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
