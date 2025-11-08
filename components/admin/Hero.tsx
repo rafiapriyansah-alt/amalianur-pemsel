@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useTransform, useSpring, useMotionValueEvent } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import { getSupabase } from "../../lib/supabaseClient";
 
 type HomeTable = {
@@ -32,7 +32,6 @@ export default function Hero({
   const preloaded = useRef<Record<number, boolean>>({});
   const timerRef = useRef<number | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
-  const waveRef = useRef<SVGSVGElement | null>(null);
 
   // Deteksi device type
   useEffect(() => {
@@ -45,46 +44,27 @@ export default function Hero({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Enhanced parallax + 3D effect dengan spring physics
+  // Parallax + zoom efek saat scroll - HANYA untuk desktop
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
 
-  // Smooth spring animation untuk efek yang lebih natural
+  // Smooth spring animation untuk desktop
   const smoothScroll = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001
   });
 
-  // Enhanced transform effects dengan range yang disesuaikan untuk mobile
-  const scale = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1.15 : 1.4]);
-  const y = useTransform(smoothScroll, [0, 1], [0, isMobile ? -80 : -180]);
-  const rotateX = useTransform(smoothScroll, [0, 1], [0, isMobile ? 2 : 5]);
-  const brightness = useTransform(smoothScroll, [0, 1], [1, isMobile ? 0.8 : 0.7]);
-  
+  // Transform effects - HANYA aktif di desktop
+  const scale = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1 : 1.25]);
+  const y = useTransform(smoothScroll, [0, 1], [0, isMobile ? 0 : -120]);
+  const brightness = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1 : 0.85]);
   const brightnessFilter = useTransform(brightness, (b) => `brightness(${b})`);
-  const transform3d = useTransform(
-    [scale, y, rotateX],
-    ([s, yVal, rX]) => `scale(${s}) translateY(${yVal}px) rotateX(${rX}deg)`
-  );
 
-  // Wave animation dengan nilai yang lebih kecil untuk mobile
-  const waveY = useTransform(smoothScroll, [0, 1], [0, isMobile ? 20 : 40]);
-  const waveOpacity = useTransform(smoothScroll, [0, 0.5, 1], [0.6, 0.8, 0.4]);
-
-  // Content animation dengan nilai yang lebih kecil untuk mobile
-  const contentY = useTransform(smoothScroll, [0, 1], [0, isMobile ? 25 : 50]);
-  const contentScale = useTransform(smoothScroll, [0, 1], [1, isMobile ? 0.98 : 0.95]);
-
-  // Debug scroll progress untuk mobile
-  useMotionValueEvent(smoothScroll, "change", (latest) => {
-    if (isMobile && latest > 0.8) {
-      // Limit efek parallax di mobile saat mendekati akhir scroll
-      console.log("Mobile scroll progress:", latest);
-    }
-  });
+  // Wave animation - smooth untuk semua device
+  const waveY = useTransform(smoothScroll, [0, 1], [0, isMobile ? 10 : 20]);
 
   // Ambil data dari Supabase (sinkron otomatis)
   useEffect(() => {
@@ -120,7 +100,7 @@ export default function Hero({
 
   const imagesToShow = dbImages.length ? dbImages : images;
 
-  // Preload image dengan optimisasi mobile
+  // Preload image
   function preload(idx: number) {
     const url = imagesToShow[idx];
     if (!url || preloaded.current[idx]) {
@@ -128,11 +108,8 @@ export default function Hero({
       setReady(true);
       return;
     }
-    
     const img = new Image();
     img.src = url;
-    img.loading = "eager";
-    
     img.onload = () => {
       preloaded.current[idx] = true;
       setReady(true);
@@ -143,24 +120,20 @@ export default function Hero({
     };
   }
 
-  // Auto ganti gambar dengan optimisasi performa
+  // Auto ganti gambar tiap beberapa detik
   useEffect(() => {
     if (!imagesToShow.length) return;
-    
     setReady(false);
     preload(index);
     preload((index + 1) % imagesToShow.length);
 
     if (timerRef.current) window.clearInterval(timerRef.current);
-    
     timerRef.current = window.setInterval(() => {
       const next = (index + 1) % imagesToShow.length;
       if (preloaded.current[next]) {
         setIndex(next);
         setReady(false);
-      } else {
-        preload(next);
-      }
+      } else preload(next);
     }, intervalMs) as any;
 
     return () => {
@@ -182,27 +155,22 @@ export default function Hero({
     <section
       ref={sectionRef}
       className="relative h-screen flex items-center justify-center overflow-hidden"
-      style={{ 
-        perspective: isMobile ? "500px" : "1000px",
-        transformStyle: "preserve-3d"
-      }}
     >
-      {/* Enhanced Background dengan efek parallax 3D yang mobile-friendly */}
-      <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
+      {/* Background dengan efek parallax HANYA di desktop */}
+      <div className="absolute inset-0">
         {currentImage ? (
           <motion.div
             key={currentImage}
             style={{ 
-              transform: transform3d,
-              filter: brightnessFilter,
-              transformStyle: "preserve-3d"
+              scale, 
+              y, 
+              filter: brightnessFilter 
             }}
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: ready ? 1 : 0, scale: 1 }}
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: ready ? 1 : 0, scale: isMobile ? 1 : 1.15 }}
             transition={{ 
-              duration: isMobile ? 1.2 : 1.5, 
-              ease: [0.25, 0.46, 0.45, 0.94],
-              opacity: { duration: isMobile ? 1 : 1.2 }
+              duration: 1.2, 
+              ease: "easeInOut" 
             }}
             className="absolute inset-0 bg-center bg-cover will-change-transform"
           >
@@ -212,143 +180,85 @@ export default function Hero({
                 backgroundImage: `url(${currentImage})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
-                // Hapus backgroundAttachment fixed untuk mobile compatibility
               }}
             />
-            {/* Safety overlay untuk mencegah gambar keluar container di mobile */}
-            <div className="absolute inset-0 bg-black/5" />
           </motion.div>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-white" />
         )}
       </div>
 
-      {/* Enhanced Overlay dengan gradient dinamis */}
-      <motion.div
+      {/* Overlay shadow */}
+      <div
         className={`absolute inset-0 ${
-          shadow 
-            ? "bg-gradient-to-b from-black/40 via-black/25 to-black/40 backdrop-blur-[0.5px]" 
-            : "bg-transparent"
+          shadow ? "bg-black/35 backdrop-blur-[1px]" : "bg-transparent"
         }`}
-        style={{ opacity: brightness }}
       />
 
-      {/* Konten Hero dengan efek parallax terbalik yang disesuaikan untuk mobile */}
-      <motion.div 
-        className="relative z-10 text-center px-4 sm:px-6 md:px-12 max-w-3xl mx-auto w-full"
-        style={{
-          y: contentY,
-          scale: contentScale,
-        }}
-      >
+      {/* Konten Hero - TIDAK berubah dari original */}
+      <div className="relative z-10 text-center px-6 sm:px-12 max-w-3xl">
         {/* Judul tetap warna aslinya (hijau) */}
         <motion.h1
-          initial={{ opacity: 0, y: isMobile ? 40 : 60, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ 
-            duration: isMobile ? 1 : 1.2,
-            ease: [0.25, 0.46, 0.45, 0.94],
-            delay: 0.2
-          }}
-          className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-green-700 leading-tight drop-shadow-[0_4px_6px_rgba(0,0,0,0.4)] px-2"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+          className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-green-700 leading-tight drop-shadow-[0_3px_4px_rgba(0,0,0,0.3)]"
         >
           {title ?? "Selamat Datang di Yayasan Amalianur"}
         </motion.h1>
 
         {/* Subjudul warna putih */}
         <motion.p
-          initial={{ opacity: 0, y: isMobile ? 30 : 40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            duration: isMobile ? 0.8 : 1,
-            delay: isMobile ? 0.4 : 0.6,
-            ease: "easeOut"
-          }}
-          className="mt-3 xs:mt-4 sm:mt-6 text-base xs:text-lg sm:text-xl md:text-2xl font-semibold text-white drop-shadow-[0_3px_5px_rgba(0,0,0,0.5)] max-w-2xl mx-auto px-3"
+          transition={{ delay: 0.4 }}
+          className="mt-6 text-2xl font-semibold text-white drop-shadow-[0_3px_4px_rgba(0,0,0,0.4)] max-w-2xl mx-auto"
         >
           {subtitle ?? "Membangun Generasi Islami dan Berakhlak Mulia"}
         </motion.p>
 
+        {/* Tombol - TIDAK diubah dari original */}
         <motion.div
-          initial={{ opacity: 0, y: isMobile ? 20 : 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            duration: 0.8,
-            delay: isMobile ? 0.7 : 0.9
-          }}
-          className="mt-4 xs:mt-5 sm:mt-6 md:mt-8 flex flex-col xs:flex-row gap-2 xs:gap-3 sm:gap-4 justify-center items-center px-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="mt-8 flex gap-4 justify-center"
         >
           <a
             href="/about"
-            className="bg-green-700 text-white font-semibold px-4 xs:px-5 sm:px-6 py-2 xs:py-2.5 sm:py-3 rounded-xl shadow-lg hover:bg-green-800 transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm xs:text-base w-full xs:w-auto text-center min-w-[140px]"
+            className="bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-green-800 transition"
           >
             Tentang Kami
           </a>
           <a
             href="/news"
-            className="bg-green-700 text-white font-semibold px-4 xs:px-5 sm:px-6 py-2 xs:py-2.5 sm:py-3 rounded-xl shadow-lg hover:bg-green-800 transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm xs:text-base w-full xs:w-auto text-center min-w-[140px]"
+            className="bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-green-800 transition"
           >
             Berita
           </a>
         </motion.div>
-      </motion.div>
+      </div>
 
-      {/* Enhanced Wave bawah dengan animasi smooth yang mobile-friendly */}
+      {/* Wave bawah dengan efek smooth scrolling */}
       <motion.div 
-        className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0] z-20"
+        className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]"
         style={{
-          y: waveY,
-          opacity: waveOpacity
+          y: waveY
         }}
       >
-        <motion.svg
-          ref={waveRef}
-          className="relative block w-full h-12 xs:h-14 sm:h-16 md:h-20 lg:h-24 text-white/70"
+        <svg
+          className="relative block w-full h-20 sm:h-28 text-white/60"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 1440 320"
           preserveAspectRatio="none"
           fill="currentColor"
-          initial={{ scaleY: 0.8 }}
-          animate={{ scaleY: 1 }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            repeatType: "reverse",
-            ease: "easeInOut"
-          }}
         >
-          <motion.path
+          <path
             fillOpacity="1"
             d="M0,160L48,186.7C96,213,192,267,288,277.3C384,288,480,256,576,213.3C672,171,768,117,864,117.3C960,117,1056,171,1152,192C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
-            initial={{ d: "M0,160L48,186.7C96,213,192,267,288,277.3C384,288,480,256,576,213.3C672,171,768,117,864,117.3C960,117,1056,171,1152,192C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" }}
-            animate={{
-              d: [
-                "M0,160L48,186.7C96,213,192,267,288,277.3C384,288,480,256,576,213.3C672,171,768,117,864,117.3C960,117,1056,171,1152,192C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
-                "M0,160L48,170.7C96,181,192,203,288,213.3C384,224,480,224,576,208C672,192,768,160,864,154.7C960,149,1056,171,1152,176C1248,181,1344,171,1392,165.3L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
-                "M0,160L48,186.7C96,213,192,267,288,277.3C384,288,480,256,576,213.3C672,171,768,117,864,117.3C960,117,1056,171,1152,192C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
-              ]
-            }}
-            transition={{
-              duration: isMobile ? 6 : 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
           />
-        </motion.svg>
+        </svg>
       </motion.div>
-
-      {/* Loading indicator untuk mobile */}
-      {!ready && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/90 backdrop-blur-sm rounded-full p-4 shadow-lg"
-          >
-            <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-          </motion.div>
-        </div>
-      )}
     </section>
   );
 }
