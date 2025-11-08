@@ -17,6 +17,8 @@ interface ContactData {
   map_link?: string;
   office_hours?: string;
   whatsapp_message?: string;
+  map_embed?: string;
+  created_at?: string;
 }
 
 interface FormData {
@@ -100,7 +102,7 @@ export default function ContactPage() {
   const getWhatsAppUrl = () => {
     if (!contact?.phone) return "#";
     const phoneNumber = contact.phone.replace(/\D/g, "");
-    const message = "Halo Yayasan Amalianur, saya ingin bertanya tentang:";
+    const message = contact?.whatsapp_message || "Halo Yayasan Amalianur, saya ingin bertanya tentang:";
     return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
   };
 

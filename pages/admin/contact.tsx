@@ -16,6 +16,7 @@ interface ContactData {
   map_link?: string;
   office_hours?: string;
   whatsapp_message?: string;
+  map_embed?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -43,7 +44,9 @@ export default function AdminContact() {
       .on(
         "postgres_changes", 
         { event: "*", schema: "public", table: "contact" }, 
-        loadData
+        () => {
+          loadData();
+        }
       )
       .subscribe();
     
@@ -100,50 +103,56 @@ export default function AdminContact() {
       setMapImage(publicUrl);
     } catch (error) {
       console.error('Error uploading image:', error);
+      alert('Error uploading image!');
     } finally {
       setUploading(false);
     }
   }
 
   async function save() {
-    setLoading(true);
-    try {
-      const contactData = {
-        address,
-        phone,
-        email,
-        map_image: mapImage,
-        map_link: mapLink,
-        office_hours: officeHours,
-        whatsapp_message: whatsappMessage,
-        updated_at: new Date().toISOString()
-      };
+  setLoading(true);
+  try {
+    const contactData = {
+      address,
+      phone,
+      email,
+      map_image: mapImage,
+      map_link: mapLink,
+      office_hours: officeHours,
+      whatsapp_message: whatsappMessage
+    };
 
-      if (data?.id) {
-        const { error } = await supabase
-          .from("contact")
-          .update(contactData)
-          .eq("id", data.id);
-        
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("contact")
-          .insert([contactData]);
-        
-        if (error) throw error;
-      }
-      
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      await loadData();
-    } catch (error) {
-      console.error("Error saving contact data:", error);
-      alert("Gagal menyimpan data!");
-    } finally {
-      setLoading(false);
+    console.log("Data yang akan disimpan:", contactData);
+
+    let result;
+    if (data?.id) {
+      result = await supabase
+        .from("contact")
+        .update(contactData)
+        .eq("id", data.id);
+    } else {
+      result = await supabase
+        .from("contact")
+        .insert([contactData]);
     }
+
+    console.log("Hasil operasi:", result);
+
+    if (result.error) {
+      console.error("Error detail:", result.error);
+      throw result.error;
+    }
+    
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+    await loadData();
+  } catch (error: any) { // ✅ PERBAIKAN: tambahkan tipe 'any'
+    console.error("Error saving contact data:", error);
+    alert(`Gagal menyimpan data: ${error.message}`);
+  } finally {
+    setLoading(false);
   }
+}
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
