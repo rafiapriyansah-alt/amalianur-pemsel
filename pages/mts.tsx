@@ -2,9 +2,9 @@
 import Head from "next/head";
 import Navbar from "../components/admin/Navbar";
 import Footer from "../components/admin/Footer";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { getSupabase } from "../lib/supabaseClient";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import CountUp from "react-countup";
 
 interface MtsData {
@@ -23,7 +23,8 @@ interface MtsData {
 export default function MTS() {
   const [data, setData] = useState<MtsData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
   const supabase = getSupabase();
 
   const load = async () => {
@@ -64,10 +65,42 @@ export default function MTS() {
     }
   };
 
+  // Touch handlers untuk mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      handleNext();
+    } else if (isRightSwipe) {
+      handlePrev();
+    }
+  };
+
+  const handleNext = useCallback(() => {
+    if (!data?.gallery) return;
+    setCurrentIndex((prev) => (prev + 1) % data.gallery.length);
+  }, [data?.gallery]);
+
+  const handlePrev = useCallback(() => {
+    if (!data?.gallery) return;
+    setCurrentIndex((prev) => (prev - 1 + data.gallery.length) % data.gallery.length);
+  }, [data?.gallery]);
+
   useEffect(() => {
     load();
 
-    // ✅ Realtime listener yang lebih robust
     const channel = supabase
       .channel("mts-realtime-public")
       .on(
@@ -86,15 +119,10 @@ export default function MTS() {
         console.log("🔌 Realtime subscription status:", status);
         if (status === "SUBSCRIBED") {
           console.log("✅ Berhasil subscribe ke realtime MTS");
-        } else if (status === "CHANNEL_ERROR") {
-          console.log("❌ Error subscribe realtime MTS");
-        } else if (status === "TIMED_OUT") {
-          console.log("⏰ Timeout subscribe realtime MTS");
         }
       });
 
     return () => {
-      console.log("🧹 Cleaning up realtime channel");
       supabase.removeChannel(channel);
     };
   }, []);
@@ -103,17 +131,16 @@ export default function MTS() {
   useEffect(() => {
     if (!data?.gallery?.length) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % data.gallery.length);
+      handleNext();
     }, 5000);
     return () => clearInterval(interval);
-  }, [data]);
-
-  // Debug effect untuk melihat perubahan data
-  useEffect(() => {
-    console.log("📊 Current MTS data:", data);
-  }, [data]);
+  }, [data, handleNext]);
 
   if (!data) return <div className="text-center p-10">Memuat data...</div>;
+
+  // Fungsi untuk mendapatkan gambar sebelumnya dan sesudahnya
+  const getPrevIndex = (current: number) => (current - 1 + data.gallery.length) % data.gallery.length;
+  const getNextIndex = (current: number) => (current + 1) % data.gallery.length;
 
   return (
     <>
@@ -267,7 +294,7 @@ export default function MTS() {
             </div>
           </section>
 
-          {/* Galeri - VERSI BARU dengan efek smooth untuk mobile */}
+          {/* Galeri - SLIDER 3D untuk Mobile & Desktop */}
           <section className="mt-16 md:mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -277,142 +304,123 @@ export default function MTS() {
               Galeri Kegiatan
             </motion.h2>
 
-            {/* Modal untuk mobile */}
-            {selectedImage && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 md:hidden"
-                onClick={() => setSelectedImage(null)}
-              >
-                <motion.img
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  src={selectedImage}
-                  alt="Galeri"
-                  className="max-w-full max-h-full object-contain rounded-lg"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  className="absolute top-4 right-4 text-white text-2xl bg-black/50 rounded-full w-8 h-8 flex items-center justify-center"
-                  onClick={() => setSelectedImage(null)}
+            <div className="max-w-4xl mx-auto">
+              {/* Mobile & Desktop: 3D Slider */}
+              <div className="relative">
+                {/* Container untuk 3D effect */}
+                <div 
+                  className="relative h-[300px] md:h-[400px] flex items-center justify-center"
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                 >
-                  ✕
-                </button>
-              </motion.div>
-            )}
-
-            {/* Mobile: Grid dengan efek paralax */}
-            <div className="md:hidden">
-              <div className="grid grid-cols-2 gap-3">
-                {data.gallery.map((g, i) => (
+                  {/* Gambar sebelumnya (kiri) */}
                   <motion.div
-                    key={`${g}-${i}`}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1, duration: 0.6 }}
-                    className="relative group"
-                  >
-                    {/* Gambar utama */}
-                    <div className="aspect-square rounded-xl overflow-hidden shadow-lg transform transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl">
-                      <img
-                        src={g}
-                        alt={`Galeri ${i}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    
-                    {/* Overlay effect */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-xl" />
-                    
-                    {/* Preview effect - gambar berikutnya terlihat sedikit */}
-                    {i < data.gallery.length - 1 && (
-                      <motion.div 
-                        className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg overflow-hidden shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500"
-                        whileHover={{ scale: 1.2 }}
-                      >
-                        <img
-                          src={data.gallery[i + 1]}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </motion.div>
-                    )}
-                    
-                    {/* Click area */}
-                    <div 
-                      className="absolute inset-0 cursor-pointer"
-                      onClick={() => setSelectedImage(g)}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-              
-              {/* Preview indicator untuk mobile */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="text-center mt-6"
-              >
-                <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  Tap gambar untuk melihat lebih detail
-                </p>
-              </motion.div>
-            </div>
-
-            {/* Desktop: Slider dengan auto-play */}
-            <div className="hidden md:block max-w-5xl mx-auto">
-              <div className="relative w-full h-[400px] rounded-2xl overflow-hidden shadow-lg group">
-                <motion.img
-                  key={data.gallery[currentIndex]}
-                  src={data.gallery[currentIndex]}
-                  alt={`Galeri ${currentIndex}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.8 }}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                
-                {/* Navigation dots */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                  {data.gallery.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentIndex(i)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        currentIndex === i 
-                          ? 'bg-white scale-125' 
-                          : 'bg-white/50 hover:bg-white/80'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Thumbnail preview */}
-              <div className="flex justify-center gap-3 mt-6">
-                {data.gallery.map((g, i) => (
-                  <motion.div
-                    key={`${g}-${i}`}
-                    whileHover={{ scale: 1.1, y: -5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
+                    className="absolute left-2 md:left-4 w-1/4 md:w-1/3 h-3/4 rounded-xl overflow-hidden shadow-lg opacity-60 z-10"
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 0.6, x: 0 }}
+                    transition={{ duration: 0.5 }}
                   >
                     <img
-                      src={g}
-                      alt={`Preview ${i}`}
-                      onClick={() => setCurrentIndex(i)}
-                      className={`w-16 h-12 rounded-lg object-cover cursor-pointer transition-all duration-300 shadow-md ${
-                        currentIndex === i 
-                          ? 'ring-3 ring-green-500 transform scale-110' 
-                          : 'opacity-70 hover:opacity-100 hover:ring-2 hover:ring-green-300'
-                      }`}
+                      src={data.gallery[getPrevIndex(currentIndex)]}
+                      alt="Previous"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30"></div>
+                  </motion.div>
+
+                  {/* Gambar utama (tengah) */}
+                  <motion.div
+                    className="absolute w-3/4 md:w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl z-20"
+                    key={currentIndex}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <img
+                      src={data.gallery[currentIndex]}
+                      alt={`Galeri ${currentIndex + 1}`}
+                      className="w-full h-full object-cover"
                     />
                   </motion.div>
-                ))}
+
+                  {/* Gambar berikutnya (kanan) */}
+                  <motion.div
+                    className="absolute right-2 md:right-4 w-1/4 md:w-1/3 h-3/4 rounded-xl overflow-hidden shadow-lg opacity-60 z-10"
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 0.6, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <img
+                      src={data.gallery[getNextIndex(currentIndex)]}
+                      alt="Next"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30"></div>
+                  </motion.div>
+
+                  {/* Navigation Arrows - Desktop */}
+                  <div className="hidden md:flex absolute inset-y-0 left-0 right-0 items-center justify-between z-30 px-4">
+                    <button
+                      onClick={handlePrev}
+                      className="bg-white/80 hover:bg-white text-green-700 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="bg-white/80 hover:bg-white text-green-700 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                    >
+                      →
+                    </button>
+                  </div>
+
+                  {/* Navigation Dots */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-30">
+                    {data.gallery.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentIndex(i)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          currentIndex === i 
+                            ? 'bg-white scale-125' 
+                            : 'bg-white/50 hover:bg-white/80'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Navigation untuk Mobile - Touch Instructions */}
+                <div className="md:hidden text-center mt-4">
+                  <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    Geser untuk melihat gambar lainnya
+                  </p>
+                </div>
+
+                {/* Thumbnail Preview untuk Desktop */}
+                <div className="hidden md:flex justify-center gap-3 mt-6">
+                  {data.gallery.map((g, i) => (
+                    <motion.div
+                      key={`${g}-${i}`}
+                      whileHover={{ scale: 1.1, y: -5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <img
+                        src={g}
+                        alt={`Preview ${i}`}
+                        onClick={() => setCurrentIndex(i)}
+                        className={`w-16 h-12 rounded-lg object-cover cursor-pointer transition-all duration-300 shadow-md ${
+                          currentIndex === i 
+                            ? 'ring-3 ring-green-500 transform scale-110' 
+                            : 'opacity-70 hover:opacity-100 hover:ring-2 hover:ring-green-300'
+                        }`}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
