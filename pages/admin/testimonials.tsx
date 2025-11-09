@@ -11,9 +11,8 @@ interface Testimonial {
   name: string;
   role: string;
   message: string;
-  photo_url?: string; // ✅ UBAH: photo -> photo_url
+  photo_url?: string;
   created_at: string;
-  updated_at?: string;
 }
 
 interface UploadResult {
@@ -88,13 +87,13 @@ export default function AdminTestimonials() {
         }
       }
 
-      // ✅ SESUAIKAN DENGAN DATABASE: photo_url
+      // ✅ HAPUS updated_at karena tidak ada di database
       const testimonialData = {
         name: name.trim(),
         role: role.trim(),
         message: message.trim(),
-        photo_url: photoUrl || (editing?.photo_url ?? null), // ✅ UBAH: photo -> photo_url
-        updated_at: new Date().toISOString()
+        photo_url: photoUrl || (editing?.photo_url ?? null),
+        // ❌ DIHAPUS: updated_at: new Date().toISOString()
       };
 
       let error;
@@ -299,7 +298,7 @@ export default function AdminTestimonials() {
                   <div className="flex items-start gap-4 flex-1">
                     {testimonial.photo_url && (
                       <img
-                        src={testimonial.photo_url} 
+                        src={testimonial.photo_url}
                         alt={testimonial.name}
                         className="w-16 h-16 rounded-full object-cover border-2 border-green-200"
                       />
