@@ -17,6 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   GraduationCap,
+  Lock,
+  MoreHorizontal,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSupabase } from "../../lib/supabaseClient";
@@ -121,6 +123,10 @@ export default function AdminLayout({
       });
     }
   };
+
+  const [otherOpen, setOtherOpen] = useState(false);
+
+
 
   const menu = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
@@ -230,44 +236,45 @@ export default function AdminLayout({
             </AnimatePresence>
           </div>
 
-          {/* Dropdown Pendidikan */}
-          <div>
-            <button
-              onClick={() => setEduOpen(!eduOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700"
-            >
-              <span className="flex items-center gap-3">
-                <GraduationCap size={18} />
-                Lainya
-              </span>
-              {eduOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
+          {/* ✅ DROPDOWN LAINNYA - TAMBAHKAN INI */}
+  <div>
+    <button
+      onClick={() => setOtherOpen(!otherOpen)}
+      className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700"
+    >
+      <span className="flex items-center gap-3">
+        <MoreHorizontal size={18} />
+        Lainnya
+      </span>
+      {otherOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+    </button>
 
-            <AnimatePresence>
-              {eduOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="ml-8 mt-1 space-y-1"
-                >
-                  {["Login-settings", "Footer"].map((level) => (
-                    <Link key={level} href={`/admin/${level}`}>
-                      <div
-                        className={`block px-3 py-1.5 rounded-md text-sm cursor-pointer ${
-                          router.pathname === `/admin/${level}`
-                            ? "bg-green-100 text-green-700 font-semibold"
-                            : "hover:bg-green-50 text-gray-600"
-                        }`}
-                      >
-                        {level.toUpperCase()}
-                      </div>
-                    </Link>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+    <AnimatePresence>
+      {otherOpen && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="ml-8 mt-1 space-y-1"
+        >
+          <Link href="/admin/login-settings">
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer ${
+                router.pathname === "/admin/login-settings"
+                  ? "bg-green-100 text-green-700 font-semibold"
+                  : "hover:bg-green-50 text-gray-600"
+              }`}
+            >
+              <Lock size={14} />
+              Login Settings
+            </div>
+          </Link>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+
+  
 
           {secondaryMenu.map((item) => (
             <Link key={item.path} href={item.path}>
