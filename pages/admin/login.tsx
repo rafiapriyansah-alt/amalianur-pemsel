@@ -22,6 +22,34 @@ export default function AdminLogin() {
   const router = useRouter();
   const supabase = getSupabase();
 
+  // 🔹 CEK JIKA SUDAH LOGIN - REDIRECT
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        console.log("✅ Existing session found, checking role...");
+        
+        // Cek role user untuk redirect yang tepat
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role")
+          .eq("email", session.user.email)
+          .single();
+
+        if (userData) {
+          if (userData.role === "super_admin") {
+            router.push("/admin/users");
+          } else {
+            router.push("/admin/home");
+          }
+        }
+      }
+    };
+
+    checkExistingSession();
+  }, [router, supabase]);
+
   // 🔹 Load login settings
   useEffect(() => {
     loadLoginSettings();
@@ -48,8 +76,7 @@ export default function AdminLogin() {
       setSettings({
         ...data,
         background_image: `${data.background_image}?t=${cacheBuster}`,
-       logo_image: data.logo_image ? `${data.logo_image}?t=${cacheBuster}` : "",
-
+        logo_image: data.logo_image ? `${data.logo_image}?t=${cacheBuster}` : "",
       });
     } catch (err) {
       console.error("🚨 Failed to load login settings:", err);
@@ -58,7 +85,7 @@ export default function AdminLogin() {
 
   const forceRefresh = () => setLastUpdate(Date.now());
 
-  // 🔹 Handle Login
+  // 🔹 Handle Login - DIPERBAIKI
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -66,16 +93,20 @@ export default function AdminLogin() {
 
     try {
       // Login via Supabase Auth
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
       if (authError || !authData.user) {
         setError("❌ Email atau kata sandi salah.");
         return;
       }
+
+      console.log("✅ Login successful, user:", authData.user.email);
+
+      // Tunggu sebentar untuk memastikan session tersimpan
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Ambil info role dari tabel users
       const { data: userRow, error: userErr } = await supabase
@@ -89,21 +120,28 @@ export default function AdminLogin() {
         return;
       }
 
+      // Simpan ke localStorage sebagai backup
       localStorage.setItem(
         "amalianur_user",
         JSON.stringify({
           email: userRow.email,
           name: userRow.name,
           role: userRow.role,
+          last_login: new Date().toISOString()
         })
       );
 
-      // Arahkan berdasarkan role
-      if (userRow.role === "super_admin") {
-        router.push("/admin/users");
-      } else {
-        router.push("/admin/home");
-      }
+      console.log("✅ User data saved, redirecting...");
+
+      // Redirect dengan timeout
+      setTimeout(() => {
+        if (userRow.role === "super_admin") {
+          router.push("/admin/users");
+        } else {
+          router.push("/admin/home");
+        }
+      }, 300);
+
     } catch (err: any) {
       console.error("🚨 Login error:", err);
       setError("Terjadi kesalahan tidak terduga saat login.");
@@ -142,7 +180,6 @@ export default function AdminLogin() {
         <div className="text-center mb-6">
           <div className="flex justify-center mb-3">
             {settings?.logo_image && settings.logo_image.trim() !== "" ? (
-
               <motion.img
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -152,7 +189,7 @@ export default function AdminLogin() {
                 className="w-16 h-16 object-contain rounded-full border-4 border-green-100 shadow-lg"
               />
             ) : (
-            <div className=" bg-gray-200 animate-pulse"></div>
+              <div className="w-16 h-16 bg-gray-200 animate-pulse rounded-full"></div>
             )}
           </div>
 
@@ -180,20 +217,27 @@ export default function AdminLogin() {
           </div>
 
           <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Kata Sandi
-  </label>
-  <div className="relative">
-    <input
-      type="password"
-      placeholder="Masukkan kata sandi"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white/80"
-      required
-    />
-  </div>
-</div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Kata Sandi
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Masukkan kata sandi"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white/80 pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
 
           {error && (
             <motion.div

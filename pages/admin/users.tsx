@@ -6,7 +6,7 @@ import { useRequireRole } from "../../hooks/useRequireRole";
 import { toast } from "react-hot-toast";
 
 export default function UsersPage() {
-  useRequireRole(["super_admin"]);
+  const { loading: authLoading } = useRequireRole(["super_admin"]);
   const supabase = getSupabase();
 
   const [users, setUsers] = useState<any[]>([]);
@@ -23,9 +23,14 @@ export default function UsersPage() {
   });
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUser(data?.user || null));
-  }, []);
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    getCurrentUser();
+  }, [supabase.auth]);
 
   async function loadUsers() {
     const { data, error } = await supabase
@@ -36,17 +41,23 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    loadUsers();
-  const channel = supabase
-    .channel("public:users")
-    .on("postgres_changes", { event: "*", schema: "public", table: "users" }, () => loadUsers())
-    .subscribe();
+    if (!authLoading) {
+      loadUsers();
+      
+      const channel = supabase
+        .channel("public:users")
+        .on("postgres_changes", { 
+          event: "*", 
+          schema: "public", 
+          table: "users" 
+        }, () => loadUsers())
+        .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel); // ✅ jangan pakai async/await di sini
-  };
-}, []);
-
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [authLoading, supabase]);
 
   // =========================
   // ✅ Tambah user baru
@@ -99,29 +110,42 @@ export default function UsersPage() {
   // =========================
   // 🗑️ Hapus user
   // =========================
- async function handleDelete(id: string) {
-  if (!confirm("Yakin ingin menghapus user ini?")) return;
+  async function handleDelete(id: string) {
+    if (!confirm("Yakin ingin menghapus user ini?")) return;
 
-  try {
-    const res = await fetch("/api/users/delete", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, actor: "Super Admin" }),
-    });
+    try {
+      const res = await fetch("/api/users/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, actor: "Super Admin" }),
+      });
 
-    const result = await res.json();
-    if (result.success) {
-      toast.success(result.message);
-      await loadUsers();
-    } else {
-      toast.error(result.message || "Gagal menghapus user.");
+      const result = await res.json();
+      if (result.success) {
+        toast.success(result.message);
+        await loadUsers();
+      } else {
+        toast.error(result.message || "Gagal menghapus user.");
+      }
+    } catch (err) {
+      console.error("Delete user error:", err);
+      toast.error("Terjadi kesalahan koneksi server.");
     }
-  } catch (err) {
-    console.error("Delete user error:", err);
-    toast.error("Terjadi kesalahan koneksi server.");
   }
-}
 
+  // 🔹 Tampilkan loading selama auth check
+  if (authLoading) {
+    return (
+      <AdminLayout title="Manajemen Pengguna">
+        <div className="p-6 bg-white rounded-xl shadow">
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span className="ml-2">Memeriksa otentikasi...</span>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Manajemen Pengguna">
