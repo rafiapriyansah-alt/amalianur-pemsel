@@ -11,7 +11,7 @@ interface Testimonial {
   name: string;
   role?: string;
   message: string;
-  photo?: string;
+  photo_url?: string; // ✅ UBAH: photo -> photo_url
   created_at?: string;
   updated_at?: string;
 }
@@ -128,7 +128,7 @@ export default function TestimonialsPage() {
                   {/* Photo */}
                   <div className="flex justify-center mb-4">
                     <img
-                      src={testimonial.photo || "/images/dummy-avatar.png"}
+                      src={testimonial.photo_url || "/images/dummy-avatar.png"}
                       className="w-20 h-20 rounded-full object-cover border-4 border-green-200 group-hover:border-green-300 transition-colors duration-300"
                       alt={testimonial.name}
                     />
@@ -137,7 +137,7 @@ export default function TestimonialsPage() {
                   {/* Message */}
                   <div className="text-center mb-6">
                     <p className="italic text-gray-700 leading-relaxed text-lg">
-                      “{testimonial.message}”
+                      "{testimonial.message}"
                     </p>
                   </div>
 

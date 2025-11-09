@@ -11,7 +11,7 @@ interface Testimonial {
   name: string;
   role: string;
   message: string;
-  photo?: string;
+  photo_url?: string; // ✅ UBAH: photo -> photo_url
   created_at: string;
   updated_at?: string;
 }
@@ -33,6 +33,7 @@ export default function AdminTestimonials() {
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadTestimonials();
@@ -50,7 +51,7 @@ export default function AdminTestimonials() {
       setTestimonials(data ?? []);
     } catch (error) {
       console.error("Error loading testimonials:", error);
-      alert("❌ Gagal memuat testimoni");
+      setError("❌ Gagal memuat testimoni");
     } finally {
       setLoading(false);
     }
@@ -58,60 +59,76 @@ export default function AdminTestimonials() {
 
   async function saveTestimonial() {
     if (!name.trim() || !message.trim()) {
-      alert("❌ Nama dan pesan harus diisi");
+      setError("❌ Nama dan pesan harus diisi");
       return;
     }
 
     try {
       setSaving(true);
+      setError("");
+      
       let photoUrl: string | null = null;
 
+      // Upload gambar jika ada file baru
       if (file) {
-        const uploaded = await uploadImageFile(file, "testimonials");
-        
-        // Handle both string and object return types
-        if (uploaded) {
-          if (typeof uploaded === 'string') {
-            photoUrl = uploaded;
-          } else {
-            photoUrl = (uploaded as UploadResult).publicUrl;
+        try {
+          const uploaded = await uploadImageFile(file, "testimonials");
+          
+          if (uploaded) {
+            if (typeof uploaded === 'string') {
+              photoUrl = uploaded;
+            } else {
+              photoUrl = (uploaded as UploadResult).publicUrl;
+            }
           }
+        } catch (uploadError) {
+          console.error("Upload error:", uploadError);
+          setError("❌ Gagal mengupload gambar");
+          return;
         }
       }
 
+      // ✅ SESUAIKAN DENGAN DATABASE: photo_url
       const testimonialData = {
         name: name.trim(),
         role: role.trim(),
         message: message.trim(),
-        photo: photoUrl || (editing?.photo ?? null),
+        photo_url: photoUrl || (editing?.photo_url ?? null), // ✅ UBAH: photo -> photo_url
         updated_at: new Date().toISOString()
       };
 
+      let error;
+      
       if (editing) {
-        const { error } = await supabase
+        // Update testimonial yang sudah ada
+        const result = await supabase
           .from("testimonials")
           .update(testimonialData)
           .eq("id", editing.id);
-        
-        if (error) throw error;
-        alert("✅ Testimoni berhasil diperbarui!");
+        error = result.error;
       } else {
-        const { error } = await supabase
+        // Tambah testimonial baru
+        const result = await supabase
           .from("testimonials")
           .insert([{ 
             ...testimonialData,
             created_at: new Date().toISOString()
           }]);
-        
-        if (error) throw error;
-        alert("✅ Testimoni berhasil ditambahkan!");
+        error = result.error;
+      }
+      
+      if (error) {
+        console.error("Supabase error:", error);
+        throw new Error(error.message);
       }
 
+      alert(editing ? "✅ Testimoni berhasil diperbarui!" : "✅ Testimoni berhasil ditambahkan!");
       resetForm();
       await loadTestimonials();
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error("Error saving testimonial:", error);
-      alert("❌ Gagal menyimpan testimoni");
+      setError(`❌ Gagal menyimpan testimoni: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -123,6 +140,7 @@ export default function AdminTestimonials() {
     setMessage("");
     setFile(null);
     setEditing(null);
+    setError("");
   }
 
   function startEdit(testimonial: Testimonial) {
@@ -131,6 +149,7 @@ export default function AdminTestimonials() {
     setRole(testimonial.role);
     setMessage(testimonial.message);
     setFile(null);
+    setError("");
   }
 
   async function removeTestimonial(id: string) {
@@ -147,7 +166,7 @@ export default function AdminTestimonials() {
       alert("✅ Testimoni berhasil dihapus!");
     } catch (error) {
       console.error("Error deleting testimonial:", error);
-      alert("❌ Gagal menghapus testimoni");
+      setError("❌ Gagal menghapus testimoni");
     }
   }
 
@@ -162,6 +181,13 @@ export default function AdminTestimonials() {
         <h2 className="text-2xl font-semibold text-gray-800 mb-6">
           {editing ? "Edit Testimoni" : "Tambah Testimoni Baru"}
         </h2>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
 
         <div className="space-y-4 mb-8">
           <div>
@@ -214,6 +240,16 @@ export default function AdminTestimonials() {
             <p className="text-xs text-gray-500 mt-1">
               {file ? `File dipilih: ${file.name}` : "Pilih foto profil (opsional)"}
             </p>
+            {editing?.photo_url && !file && (
+              <div className="mt-2">
+                <p className="text-xs text-gray-500 mb-1">Foto saat ini:</p>
+                <img 
+                  src={editing.photo_url} 
+                  alt="Current" 
+                  className="w-16 h-16 rounded-full object-cover border"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -261,9 +297,9 @@ export default function AdminTestimonials() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4 flex-1">
-                    {testimonial.photo && (
+                    {testimonial.photo_url && (
                       <img
-                        src={testimonial.photo}
+                        src={testimonial.photo_url} 
                         alt={testimonial.name}
                         className="w-16 h-16 rounded-full object-cover border-2 border-green-200"
                       />
@@ -278,7 +314,7 @@ export default function AdminTestimonials() {
                         )}
                       </div>
                       <p className="text-gray-700 italic leading-relaxed">
-                        “{testimonial.message}”
+                        "{testimonial.message}"
                       </p>
                       <p className="text-xs text-gray-500 mt-2">
                         Ditambahkan: {new Date(testimonial.created_at).toLocaleDateString('id-ID')}
