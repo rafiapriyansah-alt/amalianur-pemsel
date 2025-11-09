@@ -122,7 +122,7 @@ export default function MTS() {
 
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
         <Navbar />
-        <main className="container mx-auto px-6 pt-32 pb-16 flex-1">
+        <main className="container mx-auto px-4 sm:px-6 pt-28 pb-16 flex-1">
           
           {/* Judul + Logo */}
           <div className="flex items-center justify-center gap-4 mb-8">
@@ -141,7 +141,7 @@ export default function MTS() {
               <motion.h1
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl md:text-5xl font-bold text-green-800"
+                className="text-3xl md:text-5xl font-bold text-green-800"
                 key={data.title}
               >
                 {data.title || "Madrasah Tsanawiyah Amalianur"}
@@ -151,7 +151,7 @@ export default function MTS() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="text-lg text-gray-600 mt-2"
+                  className="text-base md:text-lg text-gray-600 mt-2"
                 >
                   {data.subtitle}
                 </motion.p>
@@ -160,11 +160,11 @@ export default function MTS() {
           </div>
 
           {/* Kepala Sekolah */}
-          <div className="grid md:grid-cols-2 gap-10 items-center mt-12">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center mt-12">
             <motion.img
               src={data.headmaster_photo}
               alt={data.headmaster}
-              className="rounded-2xl shadow-lg object-cover w-full h-[400px]"
+              className="rounded-2xl shadow-lg object-cover w-full h-[300px] md:h-[400px]"
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
@@ -175,10 +175,10 @@ export default function MTS() {
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-2xl font-semibold text-green-700 mb-2">
+              <h2 className="text-xl md:text-2xl font-semibold text-green-700 mb-2">
                 {data.headmaster}
               </h2>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-gray-700 leading-relaxed text-sm md:text-base">
                 Kepala Madrasah yang berkomitmen mencetak generasi Islami berprestasi tinggi di
                 Yayasan Amalianur.
               </p>
@@ -186,7 +186,7 @@ export default function MTS() {
           </div>
 
           {/* Statistik */}
-          <section className="mt-16 grid md:grid-cols-2 gap-8 text-center">
+          <section className="mt-16 grid md:grid-cols-2 gap-6 md:gap-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -194,10 +194,10 @@ export default function MTS() {
               className="bg-white shadow-md p-6 rounded-xl border-l-4 border-green-500"
               key={`teachers-${data.teachers_count}`}
             >
-              <h3 className="text-2xl font-bold text-green-800 flex items-center justify-center gap-2">
+              <h3 className="text-xl md:text-2xl font-bold text-green-800 flex items-center justify-center gap-2">
                 <CountUp end={data.teachers_count} duration={3} /> Guru
               </h3>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 text-sm md:text-base">
                 Guru profesional dan inspiratif.
               </p>
             </motion.div>
@@ -209,56 +209,56 @@ export default function MTS() {
               className="bg-white shadow-md p-6 rounded-xl border-l-4 border-green-500"
               key={`students-${data.students_count}`}
             >
-              <h3 className="text-2xl font-bold text-green-800 flex items-center justify-center gap-2">
+              <h3 className="text-xl md:text-2xl font-bold text-green-800 flex items-center justify-center gap-2">
                 <CountUp end={data.students_count} duration={3} /> Siswa
               </h3>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 text-sm md:text-base">
                 Siswa aktif berprestasi akademik dan spiritual.
               </p>
             </motion.div>
           </section>
 
           {/* Program */}
-          <section className="mt-20">
+          <section className="mt-16 md:mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              className="text-3xl font-semibold text-green-800 text-center mb-10"
+              className="text-2xl md:text-3xl font-semibold text-green-800 text-center mb-8 md:mb-10"
             >
               Program Unggulan
             </motion.h2>
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
               {data.programs.map((p, i) => (
                 <motion.div
                   key={`${p}-${i}`}
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-green-50 p-6 rounded-xl text-center shadow hover:shadow-lg"
+                  className="bg-green-50 p-4 md:p-6 rounded-xl text-center shadow hover:shadow-lg"
                 >
-                  <h4 className="text-green-700 font-semibold">{p}</h4>
+                  <h4 className="text-green-700 font-semibold text-sm md:text-base">{p}</h4>
                 </motion.div>
               ))}
             </div>
           </section>
 
           {/* Ekstrakurikuler */}
-          <section className="mt-20">
+          <section className="mt-16 md:mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              className="text-3xl font-semibold text-green-800 text-center mb-10"
+              className="text-2xl md:text-3xl font-semibold text-green-800 text-center mb-8 md:mb-10"
             >
               Kegiatan Ekstrakurikuler
             </motion.h2>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-3 md:gap-4">
               {data.extracurricular.map((e, i) => (
                 <motion.span
                   key={`${e}-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-green-100 text-green-700 px-4 py-2 rounded-full shadow-sm hover:bg-green-200 transition"
+                  className="bg-green-100 text-green-700 px-3 md:px-4 py-2 rounded-full shadow-sm hover:bg-green-200 transition text-sm md:text-base"
                 >
                   {e}
                 </motion.span>
@@ -266,18 +266,19 @@ export default function MTS() {
             </div>
           </section>
 
-          {/* Galeri */}
-          <section className="mt-20">
+          {/* Galeri - DIUBAH untuk responsif mobile */}
+          <section className="mt-16 md:mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              className="text-3xl font-semibold text-green-800 text-center mb-10"
+              className="text-2xl md:text-3xl font-semibold text-green-800 text-center mb-8 md:mb-10"
             >
               Galeri Kegiatan
             </motion.h2>
 
             <div className="max-w-5xl mx-auto">
-              <div className="relative w-full h-[400px] rounded-2xl overflow-hidden shadow-lg">
+              {/* Gambar utama - Responsif height */}
+              <div className="relative w-full h-[250px] sm:h-[300px] md:h-[400px] rounded-xl md:rounded-2xl overflow-hidden shadow-lg">
                 <motion.img
                   key={data.gallery[currentIndex]}
                   src={data.gallery[currentIndex]}
@@ -286,11 +287,12 @@ export default function MTS() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.8 }}
-                  className="w-full h-full object-cover rounded-2xl"
+                  className="w-full h-full object-cover"
                 />
               </div>
 
-              <div className="flex justify-center gap-3 mt-4">
+              {/* Thumbnail preview - Responsif untuk mobile */}
+              <div className="flex justify-center gap-2 md:gap-3 mt-4 px-2">
                 {data.gallery.map((g, i) => (
                   <motion.img
                     key={`${g}-${i}`}
@@ -298,8 +300,8 @@ export default function MTS() {
                     alt={`Preview ${i}`}
                     onClick={() => setCurrentIndex(i)}
                     whileHover={{ scale: 1.1 }}
-                    className={`w-20 h-16 rounded-md object-cover cursor-pointer transition-all ${
-                      currentIndex === i ? "ring-4 ring-green-500" : "opacity-70"
+                    className={`w-12 h-10 sm:w-16 sm:h-12 md:w-20 md:h-16 rounded-md object-cover cursor-pointer transition-all ${
+                      currentIndex === i ? "ring-2 md:ring-4 ring-green-500" : "opacity-70"
                     }`}
                   />
                 ))}
