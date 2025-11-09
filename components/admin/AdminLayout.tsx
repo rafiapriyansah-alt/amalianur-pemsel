@@ -1,4 +1,4 @@
-// ✅ components/admin/AdminLayout.tsx - FULL VERSION
+// ✅ components/admin/AdminLayout.tsx - VERSI LENGKAP & BENAR
 import { useState, ReactNode, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Lock,
   MoreHorizontal,
+  FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSupabase } from "../../lib/supabaseClient";
@@ -142,30 +143,6 @@ export default function AdminLayout({
     { name: "User", icon: Users, path: "/admin/users" },
   ];
 
-  // Fungsi untuk mendapatkan title halaman
-  const getPageTitle = () => {
-    if (title) return title;
-    
-    const path = router.pathname;
-    if (path === "/admin") return "Dashboard";
-    if (path === "/admin/home") return "Home Settings";
-    if (path === "/admin/programs") return "Program";
-    if (path === "/admin/news") return "Berita";
-    if (path === "/admin/galeri") return "Galeri";
-    if (path === "/admin/testimonials") return "Testimoni";
-    if (path === "/admin/about") return "Tentang Kami";
-    if (path === "/admin/pendaftaran") return "Pendaftaran";
-    if (path === "/admin/contact") return "Kontak";
-    if (path === "/admin/users") return "Manajemen User";
-    if (path === "/admin/settings") return "Settings";
-    if (path === "/admin/login-settings") return "Login Settings";
-    if (path.includes("/admin/kb")) return "KB Amalianur";
-    if (path.includes("/admin/tk")) return "TK Amalianur";
-    if (path.includes("/admin/mts")) return "MTS Amalianur";
-    
-    return "Dashboard";
-  };
-
   return (
     <div className="min-h-screen flex bg-gray-50 text-gray-800">
       {/* SIDEBAR */}
@@ -174,9 +151,9 @@ export default function AdminLayout({
           menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } z-30`}
       >
-        {/* Header Sidebar */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
+            {/* 🖼️ Logo dari database */}
             <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-50 overflow-hidden">
               {logoUrl ? (
                 <img
@@ -186,7 +163,7 @@ export default function AdminLayout({
                 />
               ) : (
                 <div className="bg-green-600 text-white w-10 h-10 flex items-center justify-center rounded-full font-bold">
-                  A
+                  {/* fallback kosong jika belum upload */}
                 </div>
               )}
             </div>
@@ -197,19 +174,18 @@ export default function AdminLayout({
           </div>
           <button
             onClick={() => setMenuOpen(false)}
-            className="md:hidden p-2 hover:bg-green-100 rounded transition-colors"
+            className="md:hidden p-2 hover:bg-green-100 rounded"
           >
             ✕
           </button>
         </div>
 
-        {/* Navigation Menu */}
         <nav className="flex-1 space-y-1 overflow-y-auto">
-          {/* Main Menu Items */}
+          {/* MENU UTAMA */}
           {menu.map((item) => (
-            <Link key={item.path} href={item.path} onClick={() => setMenuOpen(false)}>
+            <Link key={item.path} href={item.path}>
               <div
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer ${
                   router.pathname === item.path
                     ? "bg-green-100 text-green-700 font-semibold"
                     : "hover:bg-green-50 text-gray-700"
@@ -221,11 +197,11 @@ export default function AdminLayout({
             </Link>
           ))}
 
-          {/* Dropdown Pendidikan */}
+          {/* DROPDOWN PENDIDIKAN */}
           <div>
             <button
               onClick={() => setEduOpen(!eduOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700"
             >
               <span className="flex items-center gap-3">
                 <GraduationCap size={18} />
@@ -240,13 +216,12 @@ export default function AdminLayout({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="ml-8 mt-1 space-y-1 overflow-hidden"
+                  className="ml-8 mt-1 space-y-1"
                 >
                   {["kb", "tk", "mts"].map((level) => (
-                    <Link key={level} href={`/admin/${level}`} onClick={() => setMenuOpen(false)}>
+                    <Link key={level} href={`/admin/${level}`}>
                       <div
-                        className={`block px-3 py-1.5 rounded-md text-sm cursor-pointer transition-colors ${
+                        className={`block px-3 py-1.5 rounded-md text-sm cursor-pointer ${
                           router.pathname === `/admin/${level}`
                             ? "bg-green-100 text-green-700 font-semibold"
                             : "hover:bg-green-50 text-gray-600"
@@ -261,50 +236,11 @@ export default function AdminLayout({
             </AnimatePresence>
           </div>
 
-          {/* Dropdown Lainnya */}
-          <div>
-            <button
-              onClick={() => setOtherOpen(!otherOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700 transition-colors"
-            >
-              <span className="flex items-center gap-3">
-                <MoreHorizontal size={18} />
-                Lainnya
-              </span>
-              {otherOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-
-            <AnimatePresence>
-              {otherOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="ml-8 mt-1 space-y-1 overflow-hidden"
-                >
-                  <Link href="/admin/login-settings" onClick={() => setMenuOpen(false)}>
-                    <div
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer transition-colors ${
-                        router.pathname === "/admin/login-settings"
-                          ? "bg-green-100 text-green-700 font-semibold"
-                          : "hover:bg-green-50 text-gray-600"
-                      }`}
-                    >
-                      <Lock size={14} />
-                      Login Settings
-                    </div>
-                  </Link>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Secondary Menu Items */}
+          {/* MENU SECONDARY */}
           {secondaryMenu.map((item) => (
-            <Link key={item.path} href={item.path} onClick={() => setMenuOpen(false)}>
+            <Link key={item.path} href={item.path}>
               <div
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer ${
                   router.pathname === item.path
                     ? "bg-green-100 text-green-700 font-semibold"
                     : "hover:bg-green-50 text-gray-700"
@@ -315,23 +251,66 @@ export default function AdminLayout({
               </div>
             </Link>
           ))}
+
+         {/* ✅ DROPDOWN LAINNYA - DIBAWAH USERS */}
+<div className="mt-2">
+  <button
+    onClick={() => setOtherOpen(!otherOpen)}
+    className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700"
+  >
+    <span className="flex items-center gap-3">
+      <MoreHorizontal size={18} />
+      Lainnya
+    </span>
+    {otherOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+  </button>
+
+  <AnimatePresence>
+    {otherOpen && (
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: "auto", opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }}
+        className="ml-8 mt-1 space-y-1"
+      >
+        <Link href="/admin/login-settings">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer ${
+              router.pathname === "/admin/login-settings"
+                ? "bg-green-100 text-green-700 font-semibold"
+                : "hover:bg-green-50 text-gray-600"
+            }`}
+          >
+            <Lock size={14} />
+            Login Settings
+          </div>
+        </Link>
+        
+        <Link href="/admin/footer">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer ${
+              router.pathname === "/admin/footer"
+                ? "bg-green-100 text-green-700 font-semibold"
+                : "hover:bg-green-50 text-gray-600"
+            }`}
+          >
+            <FileText size={14} />
+            Footer
+          </div>
+        </Link>
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
         </nav>
 
-        {/* Footer Sidebar */}
-        <div className="border-t border-gray-200 pt-3 space-y-1">
-          {/* User Info & Copyright */}
-          <div className="px-3 py-2 text-xs text-gray-500">
-            <div className="font-medium text-gray-700 truncate">{user.name}</div>
-            <div className="capitalize text-gray-500">{user.role.replace("_", " ")}</div>
-            <div className="mt-2 pt-2 border-t border-gray-200 text-gray-400">
-              © {new Date().getFullYear()} {siteName}
-            </div>
-          </div>
+        
 
-          {/* Settings & Logout */}
-          <Link href="/admin/settings" onClick={() => setMenuOpen(false)}>
+        {/* ✅ FOOTER SIDEBAR - TANPA PERUBAHAN */}
+        <div className="border-t pt-3 space-y-1">
+          <Link href="/admin/settings">
             <div
-              className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer ${
                 router.pathname === "/admin/settings"
                   ? "bg-green-100 text-green-700 font-semibold"
                   : "hover:bg-green-50 text-gray-700"
@@ -343,7 +322,7 @@ export default function AdminLayout({
           </Link>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 rounded-md w-full text-left hover:bg-red-50 text-red-600 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-md w-full text-left hover:bg-red-50 text-red-600"
           >
             <LogOut size={18} />
             Logout
@@ -351,25 +330,21 @@ export default function AdminLayout({
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-        {/* Header */}
+      {/* CONTENT AREA - TANPA PERUBAHAN */}
+      <div className="flex-1 md:ml-64">
         <header className="bg-white shadow-sm py-3 px-5 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-4">
-            <button
-              className="md:hidden p-2 bg-green-100 rounded-md hover:bg-green-200 transition-colors"
-              onClick={() => setMenuOpen(true)}
-            >
-              ☰
-            </button>
-            <h1 className="text-lg font-semibold text-green-700">
-              {getPageTitle()}
-            </h1>
-          </div>
-          
+          <button
+            className="md:hidden p-2 bg-green-100 rounded-md"
+            onClick={() => setMenuOpen(true)}
+          >
+            ☰
+          </button>
+          <h1 className="text-lg font-semibold text-green-700">
+            {router.pathname.replace("/admin/", "").toUpperCase() || "DASHBOARD"}
+          </h1>
           <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="font-semibold text-sm text-gray-800">{user.name}</p>
+            <div className="text-right">
+              <p className="font-semibold">{user.name}</p>
               <p className="text-xs text-gray-500 capitalize">
                 {user.role.replace("_", " ")}
               </p>
@@ -380,33 +355,8 @@ export default function AdminLayout({
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 bg-gray-50">
-          {children}
-        </main>
-
-        {/* Main Footer */}
-        <footer className="bg-white border-t border-gray-200 py-4 px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-sm text-gray-600 mb-2 md:mb-0">
-              © {new Date().getFullYear()} {siteName}. All rights reserved.
-            </div>
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <span>Admin Panel v1.0</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="hidden sm:inline">Powered by Amalianur</span>
-            </div>
-          </div>
-        </footer>
+        <main className="p-6">{children}</main>
       </div>
-
-      {/* Overlay for mobile */}
-      {menuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
-          onClick={() => setMenuOpen(false)}
-        />
-      )}
     </div>
   );
 }

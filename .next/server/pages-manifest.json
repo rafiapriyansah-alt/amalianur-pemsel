@@ -1,0 +1,13 @@
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/galeri": "pages/galeri.js",
+  "/": "pages/index.js",
+  "/programs": "pages/programs.js",
+  "/about": "pages/about.js",
+  "/news": "pages/news.js",
+  "/testimonials": "pages/testimonials.js",
+  "/contact": "pages/contact.js",
+  "/pendaftaran": "pages/pendaftaran.js"
+}
