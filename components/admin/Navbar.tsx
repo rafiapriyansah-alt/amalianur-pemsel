@@ -85,6 +85,7 @@ export default function Navbar() {
     { name: "Program", href: "/programs" },
     { name: "Galeri", href: "/galeri" },
     { name: "Berita", href: "/news" },
+    { name: "Testimoni", href: "/testimonials" },
     { name: "Kontak", href: "/contact" },
   ];
 
