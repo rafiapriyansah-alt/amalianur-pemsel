@@ -26,6 +26,7 @@ export default function MTS() {
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [direction, setDirection] = useState(0); // 0: initial, 1: next, -1: prev
   const supabase = getSupabase();
 
   const load = async () => {
@@ -99,11 +100,13 @@ export default function MTS() {
 
   const handleNext = useCallback(() => {
     if (!data?.gallery?.length) return;
+    setDirection(1);
     setCurrentIndex((prev) => (prev + 1) % data.gallery.length);
   }, [data?.gallery]);
 
   const handlePrev = useCallback(() => {
     if (!data?.gallery?.length) return;
+    setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + data.gallery.length) % data.gallery.length);
   }, [data?.gallery]);
 
@@ -145,12 +148,11 @@ export default function MTS() {
     return () => clearInterval(interval);
   }, [data, handleNext]);
 
-  // Fungsi untuk mendapatkan gambar sebelumnya dan sesudahnya
-  const getPrevIndex = (current: number) => 
-    data?.gallery?.length ? (current - 1 + data.gallery.length) % data.gallery.length : 0;
-  
-  const getNextIndex = (current: number) => 
-    data?.gallery?.length ? (current + 1) % data.gallery.length : 0;
+  // Reset direction setelah animasi selesai
+  useEffect(() => {
+    const timer = setTimeout(() => setDirection(0), 500);
+    return () => clearTimeout(timer);
+  }, [currentIndex]);
 
   if (isLoading) {
     return (
@@ -178,6 +180,25 @@ export default function MTS() {
       </div>
     );
   }
+
+  // Variants untuk animasi slide
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 300 : -300,
+      opacity: 0,
+      scale: 0.9
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1
+    },
+    exit: (direction: number) => ({
+      x: direction < 0 ? 300 : -300,
+      opacity: 0,
+      scale: 0.9
+    })
+  };
 
   return (
     <>
@@ -334,7 +355,7 @@ export default function MTS() {
             </div>
           </section>
 
-          {/* Galeri Kegiatan - VERSI RESPONSIF */}
+          {/* Galeri Kegiatan - VERSI MOBILE SEDERHANA & DESKTOP 3D */}
           <section className="mt-12 md:mt-16">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -345,139 +366,188 @@ export default function MTS() {
             </motion.h2>
 
             <div className="max-w-4xl mx-auto">
-              {/* Container untuk 3D effect */}
-              <div 
-                className="relative h-[200px] sm:h-[300px] md:h-[400px] flex items-center justify-center"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                {/* Gambar sebelumnya (kiri) */}
-                <motion.div
-                  className="absolute left-0 sm:left-2 md:left-4 w-1/4 sm:w-1/4 md:w-1/3 h-1/2 sm:h-3/4 rounded-lg sm:rounded-xl overflow-hidden shadow-md sm:shadow-lg opacity-30 sm:opacity-60 z-10"
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 0.3, x: 0 }}
-                  transition={{ duration: 0.5 }}
+              
+              {/* MOBILE VERSION - Simple Slider */}
+              <div className="block md:hidden">
+                <div className="relative h-[300px] rounded-2xl overflow-hidden bg-gray-100"
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                 >
-                  <img
-                    src={data.gallery[getPrevIndex(currentIndex)]}
-                    alt="Previous"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/20 sm:bg-black/30"></div>
-                </motion.div>
+                  <AnimatePresence mode="wait" custom={direction}>
+                    <motion.div
+                      key={currentIndex}
+                      custom={direction}
+                      variants={slideVariants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{
+                        x: { type: "spring", stiffness: 300, damping: 30 },
+                        opacity: { duration: 0.2 },
+                        scale: { duration: 0.3 }
+                      }}
+                      className="absolute inset-0 w-full h-full"
+                    >
+                      <img
+                        src={data.gallery[currentIndex]}
+                        alt={`Galeri ${currentIndex + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </motion.div>
+                  </AnimatePresence>
 
-                {/* Gambar utama (tengah) */}
-                <motion.div
-                  className="absolute w-3/4 sm:w-3/4 md:w-2/3 h-full rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl z-20 mx-auto"
-                  key={currentIndex}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <img
-                    src={data.gallery[currentIndex]}
-                    alt={`Galeri ${currentIndex + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
+                  {/* Navigation Dots - Mobile */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-30">
+                    {data.gallery.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setDirection(index > currentIndex ? 1 : -1);
+                          setCurrentIndex(index);
+                        }}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          currentIndex === index 
+                            ? 'bg-white scale-125' 
+                            : 'bg-white/50 hover:bg-white/80'
+                        }`}
+                        aria-label={`Pergi ke gambar ${index + 1}`}
+                      />
+                    ))}
+                  </div>
 
-                {/* Gambar berikutnya (kanan) */}
-                <motion.div
-                  className="absolute right-0 sm:right-2 md:right-4 w-1/4 sm:w-1/4 md:w-1/3 h-1/2 sm:h-3/4 rounded-lg sm:rounded-xl overflow-hidden shadow-md sm:shadow-lg opacity-30 sm:opacity-60 z-10"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 0.3, x: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <img
-                    src={data.gallery[getNextIndex(currentIndex)]}
-                    alt="Next"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/20 sm:bg-black/30"></div>
-                </motion.div>
-
-                {/* Navigation Arrows - Desktop & Tablet */}
-                <div className="hidden sm:flex absolute inset-y-0 left-0 right-0 items-center justify-between z-30 px-2 md:px-4">
-                  <button
-                    onClick={handlePrev}
-                    className="bg-white/80 hover:bg-white text-green-700 w-8 h-8 md:w-10 md:h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 text-sm md:text-base"
-                    aria-label="Gambar sebelumnya"
-                  >
-                    ←
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="bg-white/80 hover:bg-white text-green-700 w-8 h-8 md:w-10 md:h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 text-sm md:text-base"
-                    aria-label="Gambar berikutnya"
-                  >
-                    →
-                  </button>
-                </div>
-
-                {/* Navigation Dots */}
-                <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1 sm:gap-2 z-30">
-                  {data.gallery.map((_, index) => (
+                  {/* Navigation Arrows - Mobile */}
+                  <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-4 z-20">
                     <button
-                      key={index}
-                      onClick={() => setCurrentIndex(index)}
-                      className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
-                        currentIndex === index 
-                          ? 'bg-white scale-125' 
-                          : 'bg-white/50 hover:bg-white/80'
-                      }`}
-                      aria-label={`Pergi ke gambar ${index + 1}`}
-                    />
-                  ))}
+                      onClick={handlePrev}
+                      className="bg-white/80 hover:bg-white text-green-700 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                      aria-label="Gambar sebelumnya"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="bg-white/80 hover:bg-white text-green-700 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                      aria-label="Gambar berikutnya"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mobile Instructions */}
+                <div className="text-center mt-4">
+                  <p className="text-xs text-gray-600 flex items-center justify-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    Geser atau tekan tombol untuk melihat gambar lainnya
+                  </p>
                 </div>
               </div>
 
-              {/* Mobile Navigation & Instructions */}
-              <div className="sm:hidden text-center mt-4">
-                <div className="flex justify-center gap-4 mb-2">
-                  <button
-                    onClick={handlePrev}
-                    className="bg-green-600 hover:bg-green-700 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all"
-                    aria-label="Gambar sebelumnya"
-                  >
-                    ←
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="bg-green-600 hover:bg-green-700 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all"
-                    aria-label="Gambar berikutnya"
-                  >
-                    →
-                  </button>
-                </div>
-                <p className="text-xs text-gray-600 flex items-center justify-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                  Geser atau tekan tombol untuk melihat gambar lainnya
-                </p>
-              </div>
-
-              {/* Thumbnail Preview untuk Tablet & Desktop */}
-              <div className="hidden sm:flex justify-center gap-2 md:gap-3 mt-4 md:mt-6 overflow-x-auto py-2">
-                {data.gallery.map((image, index) => (
+              {/* DESKTOP VERSION - 3D Slider */}
+              <div className="hidden md:block">
+                <div className="relative h-[400px] flex items-center justify-center">
+                  {/* Gambar sebelumnya (kiri) */}
                   <motion.div
-                    key={index}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    className="flex-shrink-0"
+                    className="absolute left-4 w-1/3 h-3/4 rounded-xl overflow-hidden shadow-lg opacity-60 z-10"
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 0.6, x: 0 }}
+                    transition={{ duration: 0.5 }}
                   >
                     <img
-                      src={image}
-                      alt={`Preview ${index}`}
-                      onClick={() => setCurrentIndex(index)}
-                      className={`w-12 h-9 md:w-16 md:h-12 rounded-md md:rounded-lg object-cover cursor-pointer transition-all duration-300 shadow ${
-                        currentIndex === index 
-                          ? 'ring-2 ring-green-500 transform scale-105' 
-                          : 'opacity-70 hover:opacity-100 hover:ring-1 hover:ring-green-300'
-                      }`}
+                      src={data.gallery[(currentIndex - 1 + data.gallery.length) % data.gallery.length]}
+                      alt="Previous"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30"></div>
+                  </motion.div>
+
+                  {/* Gambar utama (tengah) */}
+                  <motion.div
+                    className="absolute w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl z-20"
+                    key={currentIndex}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <img
+                      src={data.gallery[currentIndex]}
+                      alt={`Galeri ${currentIndex + 1}`}
+                      className="w-full h-full object-cover"
                     />
                   </motion.div>
-                ))}
+
+                  {/* Gambar berikutnya (kanan) */}
+                  <motion.div
+                    className="absolute right-4 w-1/3 h-3/4 rounded-xl overflow-hidden shadow-lg opacity-60 z-10"
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 0.6, x: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <img
+                      src={data.gallery[(currentIndex + 1) % data.gallery.length]}
+                      alt="Next"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30"></div>
+                  </motion.div>
+
+                  {/* Navigation Arrows - Desktop */}
+                  <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-4 z-30">
+                    <button
+                      onClick={handlePrev}
+                      className="bg-white/80 hover:bg-white text-green-700 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                      aria-label="Gambar sebelumnya"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="bg-white/80 hover:bg-white text-green-700 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+                      aria-label="Gambar berikutnya"
+                    >
+                      →
+                    </button>
+                  </div>
+
+                  {/* Navigation Dots - Desktop */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-30">
+                    {data.gallery.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentIndex(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          currentIndex === index 
+                            ? 'bg-white scale-125' 
+                            : 'bg-white/50 hover:bg-white/80'
+                        }`}
+                        aria-label={`Pergi ke gambar ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Thumbnail Preview untuk Desktop */}
+                <div className="flex justify-center gap-3 mt-6">
+                  {data.gallery.map((image, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.1, y: -5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <img
+                        src={image}
+                        alt={`Preview ${index}`}
+                        onClick={() => setCurrentIndex(index)}
+                        className={`w-16 h-12 rounded-lg object-cover cursor-pointer transition-all duration-300 shadow-md ${
+                          currentIndex === index 
+                            ? 'ring-3 ring-green-500 transform scale-110' 
+                            : 'opacity-70 hover:opacity-100 hover:ring-2 hover:ring-green-300'
+                        }`}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
