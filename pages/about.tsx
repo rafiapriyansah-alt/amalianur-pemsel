@@ -111,10 +111,16 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
+              className="bg-white rounded-2xl shadow-lg p-8 border-2 border-green-100"
             >
-              <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-line">
-                {data.content}
-              </p>
+              <div className="relative">
+                <div className="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-green-500 rounded-tl-lg"></div>
+                <div className="absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 border-green-500 rounded-br-lg"></div>
+                
+                <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-line font-sans tracking-normal">
+                  {data.content}
+                </p>
+              </div>
             </motion.div>
           </div>
 
