@@ -21,6 +21,7 @@ interface TkData {
 export default function TK() {
   const [data, setData] = useState<TkData | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const supabase = getSupabase();
 
   const load = async () => {
@@ -248,7 +249,7 @@ export default function TK() {
             </div>
           </section>
 
-          {/* Galeri - DIUBAH untuk responsif mobile */}
+          {/* Galeri - VERSI BARU dengan efek smooth untuk mobile */}
           <section className="mt-16 md:mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -258,9 +259,95 @@ export default function TK() {
               Galeri Kegiatan
             </motion.h2>
 
-            <div className="max-w-5xl mx-auto">
-              {/* Gambar utama - Responsif height */}
-              <div className="relative w-full h-[250px] sm:h-[300px] md:h-[400px] rounded-xl md:rounded-2xl overflow-hidden shadow-lg">
+            {/* Modal untuk mobile */}
+            {selectedImage && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 md:hidden"
+                onClick={() => setSelectedImage(null)}
+              >
+                <motion.img
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  src={selectedImage}
+                  alt="Galeri"
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <button
+                  className="absolute top-4 right-4 text-white text-2xl bg-black/50 rounded-full w-8 h-8 flex items-center justify-center"
+                  onClick={() => setSelectedImage(null)}
+                >
+                  ✕
+                </button>
+              </motion.div>
+            )}
+
+            {/* Mobile: Grid dengan efek paralax */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-2 gap-3">
+                {data.gallery.map((g, i) => (
+                  <motion.div
+                    key={`${g}-${i}`}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1, duration: 0.6 }}
+                    className="relative group"
+                  >
+                    {/* Gambar utama */}
+                    <div className="aspect-square rounded-xl overflow-hidden shadow-lg transform transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl">
+                      <img
+                        src={g}
+                        alt={`Galeri ${i}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    
+                    {/* Overlay effect */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 rounded-xl" />
+                    
+                    {/* Preview effect - gambar berikutnya terlihat sedikit */}
+                    {i < data.gallery.length - 1 && (
+                      <motion.div 
+                        className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg overflow-hidden shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-500"
+                        whileHover={{ scale: 1.2 }}
+                      >
+                        <img
+                          src={data.gallery[i + 1]}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </motion.div>
+                    )}
+                    
+                    {/* Click area */}
+                    <div 
+                      className="absolute inset-0 cursor-pointer"
+                      onClick={() => setSelectedImage(g)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+              
+              {/* Preview indicator untuk mobile */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="text-center mt-6"
+              >
+                <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  Tap gambar untuk melihat lebih detail
+                </p>
+              </motion.div>
+            </div>
+
+            {/* Desktop: Slider dengan auto-play */}
+            <div className="hidden md:block max-w-5xl mx-auto">
+              <div className="relative w-full h-[400px] rounded-2xl overflow-hidden shadow-lg group">
                 <motion.img
                   key={data.gallery[currentIndex]}
                   src={data.gallery[currentIndex]}
@@ -269,23 +356,44 @@ export default function TK() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.8 }}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
+                
+                {/* Navigation dots */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                  {data.gallery.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentIndex(i)}
+                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                        currentIndex === i 
+                          ? 'bg-white scale-125' 
+                          : 'bg-white/50 hover:bg-white/80'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Thumbnail preview - Responsif untuk mobile */}
-              <div className="flex justify-center gap-2 md:gap-3 mt-4 px-2">
+              {/* Thumbnail preview */}
+              <div className="flex justify-center gap-3 mt-6">
                 {data.gallery.map((g, i) => (
-                  <motion.img
+                  <motion.div
                     key={`${g}-${i}`}
-                    src={g}
-                    alt={`Preview ${i}`}
-                    onClick={() => setCurrentIndex(i)}
-                    whileHover={{ scale: 1.1 }}
-                    className={`w-12 h-10 sm:w-16 sm:h-12 md:w-20 md:h-16 rounded-md object-cover cursor-pointer transition-all ${
-                      currentIndex === i ? "ring-2 md:ring-4 ring-green-500" : "opacity-70"
-                    }`}
-                  />
+                    whileHover={{ scale: 1.1, y: -5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <img
+                      src={g}
+                      alt={`Preview ${i}`}
+                      onClick={() => setCurrentIndex(i)}
+                      className={`w-16 h-12 rounded-lg object-cover cursor-pointer transition-all duration-300 shadow-md ${
+                        currentIndex === i 
+                          ? 'ring-3 ring-green-500 transform scale-110' 
+                          : 'opacity-70 hover:opacity-100 hover:ring-2 hover:ring-green-300'
+                      }`}
+                    />
+                  </motion.div>
                 ))}
               </div>
             </div>
