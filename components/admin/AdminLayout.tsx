@@ -10,6 +10,7 @@ import {
   Info,
   Heart,
   Mail,
+  Home,
   Users,
   LogOut,
   Settings,
@@ -124,7 +125,7 @@ export default function AdminLayout({
   const menu = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
     { name: "Program", icon: BookOpen, path: "/admin/programs" },
-    { name: "Home", icon: Users, path: "/admin/home" },
+    { name: "Home", icon: Home, path: "/admin/home" },
     { name: "Berita", icon: Newspaper, path: "/admin/news" },
     { name: "Galeri", icon: Image, path: "/admin/galeri" },
     { name: "Testimoni", icon: Users, path: "/admin/testimonials" },
@@ -212,6 +213,45 @@ export default function AdminLayout({
                   className="ml-8 mt-1 space-y-1"
                 >
                   {["kb", "tk", "mts"].map((level) => (
+                    <Link key={level} href={`/admin/${level}`}>
+                      <div
+                        className={`block px-3 py-1.5 rounded-md text-sm cursor-pointer ${
+                          router.pathname === `/admin/${level}`
+                            ? "bg-green-100 text-green-700 font-semibold"
+                            : "hover:bg-green-50 text-gray-600"
+                        }`}
+                      >
+                        {level.toUpperCase()}
+                      </div>
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Dropdown Pendidikan */}
+          <div>
+            <button
+              onClick={() => setEduOpen(!eduOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-green-50 text-gray-700"
+            >
+              <span className="flex items-center gap-3">
+                <GraduationCap size={18} />
+                Lainya
+              </span>
+              {eduOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            <AnimatePresence>
+              {eduOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="ml-8 mt-1 space-y-1"
+                >
+                  {["Login-settings", "Footer"].map((level) => (
                     <Link key={level} href={`/admin/${level}`}>
                       <div
                         className={`block px-3 py-1.5 rounded-md text-sm cursor-pointer ${
