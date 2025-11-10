@@ -40,58 +40,40 @@ export default function Galeri() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 🟢 Load awal
-  // 🟢 EFFECT PERTAMA - YANG HARUS DIUBAH
+  // 🟡 EFFECT PERTAMA - Sekarang ini yang menyebabkan delay
 useEffect(() => {
-  let isMounted = true;
+  async function load() {
+    // ❌ SEMUA data diload sekaligus
+    const { data: galleryData } = await supabase
+      .from("gallery")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  async function loadInitial() {
-    try {
-      // 🔥 PRIORITAS 1: Load gallery data saja dulu (yang paling penting)
-      const { data: galleryData } = await supabase
-        .from("gallery")
-        .select("id, title, image_url, category, created_at") // 🔥 Hanya field yang diperlukan
-        .order("created_at", { ascending: false })
-        .limit(20); // 🔥 Batasi jumlah data untuk loading cepat
+    const { data: likeData } = await supabase.from("gallery_likes").select("gallery_id, user_ip");
+    const { data: shareData } = await supabase.from("gallery_shares").select("gallery_id");
+    
+    const likeCount: Record<string, number> = {};
+    const shareCount: Record<string, number> = {};
+    const userLikeStatus: Record<string, boolean> = {};
 
-      if (isMounted && galleryData) {
-        setGallery(galleryData);
+    // ❌ Processing yang berat
+    likeData?.forEach((l) => {
+      likeCount[l.gallery_id] = (likeCount[l.gallery_id] || 0) + 1;
+      if (l.user_ip === "dummy-ip") {
+        userLikeStatus[l.gallery_id] = true;
       }
+    });
 
-      // 🔥 PRIORITAS 2: Load likes & shares secara PARALEL (setelah gallery muncul)
-      const [likeResult, shareResult] = await Promise.allSettled([
-        supabase.from("gallery_likes").select("gallery_id"),
-        supabase.from("gallery_shares").select("gallery_id")
-      ]);
+    shareData?.forEach((s) => {
+      shareCount[s.gallery_id] = (shareCount[s.gallery_id] || 0) + 1;
+    });
 
-      if (isMounted) {
-        // Process likes - lebih sederhana
-        if (likeResult.status === 'fulfilled' && likeResult.value.data) {
-          const likeCount: Record<string, number> = {};
-          likeResult.value.data.forEach((l) => {
-            likeCount[l.gallery_id] = (likeCount[l.gallery_id] || 0) + 1;
-          });
-          setLikes(likeCount);
-        }
-
-        // Process shares - lebih sederhana  
-        if (shareResult.status === 'fulfilled' && shareResult.value.data) {
-          const shareCount: Record<string, number> = {};
-          shareResult.value.data.forEach((s) => {
-            shareCount[s.gallery_id] = (shareCount[s.gallery_id] || 0) + 1;
-          });
-          setShares(shareCount);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading gallery:", error);
-    }
+    setGallery(galleryData || []);
+    setLikes(likeCount);
+    setShares(shareCount);
+    setUserLikes(userLikeStatus);
   }
-
-  loadInitial();
-
-  return () => {
-    isMounted = false;
-  };
+  load();
 }, []);
 
   // 🔴 Realtime updates

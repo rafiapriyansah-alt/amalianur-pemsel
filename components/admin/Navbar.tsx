@@ -106,32 +106,35 @@ export default function Navbar() {
   };
 
   return (
-   <header
-  ref={navbarRef}
+    <header
+      ref={navbarRef}
+      className={`fixed w-full top-0 z-50 transition-all duration-300 ${
+        scrolled || open 
+          ? "bg-white shadow-md" 
+          : "bg-white/95 backdrop-blur-md"
+      }`}
     >
       <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* LOGO - Diperkecil untuk tablet */}
-        
-<div className="flex items-center gap-3 flex-shrink-0">
-  {logo ? (
-    <motion.img
-      src={logo}
-      alt="Logo Yayasan"
-      className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover shadow-sm"
-      whileHover={{ scale: 1.05 }}
-      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-    />
-  ) : (
-    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
-      <span className="text-white font-bold text-xs">YA</span>
-    </div>
-  )}
-  <div>
-    <div className="font-bold text-green-800 text-sm md:text-lg leading-tight">{siteName}</div>
-    <div className="text-xs text-gray-500 leading-tight">Pematang Seleng</div>
-  </div>
-</div>
-
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {logo ? (
+            <motion.img
+              src={logo}
+              alt="Logo Yayasan"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover shadow-sm"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            />
+          ) : (
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
+              <span className="text-white font-bold text-xs">YA</span>
+            </div>
+          )}
+          <div>
+            <div className="font-bold text-green-800 text-sm md:text-lg leading-tight">{siteName}</div>
+            <div className="text-xs text-gray-500 leading-tight">Pematang Seleng</div>
+          </div>
+        </div>
 
         {/* DESKTOP & TABLET MENU - Dioptimalkan untuk iPad */}
         <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-sm font-medium text-gray-700">
@@ -355,18 +358,18 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
             />
 
-           <motion.aside
-  initial={{ x: "100%" }}
-  animate={{ x: 0 }}
-  exit={{ x: "100%" }}
-  transition={{ 
-    type: "spring", 
-    stiffness: 300, 
-    damping: 30,
-    mass: 0.8
-  }}
-  className="absolute right-0 top-0 w-72 md:w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
->
+            <motion.aside
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 30,
+                mass: 0.8
+              }}
+              className="absolute right-0 top-0 w-72 md:w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
+            >
               {/* Header Sidebar */}
               <motion.div 
                 className="flex justify-between items-center mb-8"
@@ -375,22 +378,22 @@ export default function Navbar() {
                 transition={{ delay: 0.1 }}
               >
                 <div className="flex items-center gap-3">
-  {logo ? (
-    <img
-      src={logo}
-      alt="Logo Yayasan"
-      className="w-10 h-10 rounded-lg object-cover shadow-sm"
-    />
-  ) : (
-    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
-      <span className="text-white font-bold text-xs">YA</span>
-    </div>
-  )}
-  <div>
-    <div className="font-bold text-green-800 text-lg">{siteName}</div>
-    <div className="text-xs text-gray-500">Pematang Seleng</div>
-  </div>
-</div>
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt="Logo Yayasan"
+                      className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
+                      <span className="text-white font-bold text-xs">YA</span>
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-bold text-green-800 text-lg">{siteName}</div>
+                    <div className="text-xs text-gray-500">Pematang Seleng</div>
+                  </div>
+                </div>
                 <motion.button 
                   onClick={() => setOpen(false)} 
                   className="text-green-700 hover:text-green-800 transition-colors p-1"

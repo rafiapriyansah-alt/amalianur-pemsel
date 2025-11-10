@@ -27,11 +27,6 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/galeri": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/galeri.js"
-    ],
     "/kb": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
