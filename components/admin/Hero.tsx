@@ -217,25 +217,27 @@ export default function Hero({
           {subtitle ?? "Membangun Generasi Islami dan Berakhlak Mulia"}
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-2"
-        >
-          <a
-            href="/about"
-            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-full sm:w-auto text-center"
-          >
-            Tentang Kami
-          </a>
-          <a
-            href="/news"
-            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-full sm:w-auto text-center"
-          >
-            Berita
-          </a>
-        </motion.div>
+
+
+<motion.div
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ delay: 0.7 }}
+  className="mt-6 sm:mt-8 flex flex-row gap-3 sm:gap-4 justify-center items-center px-2"
+>
+  <a
+    href="/about"
+    className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-auto text-center"
+  >
+    Tentang Kami
+  </a>
+  <a
+    href="/news"
+    className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-auto text-center"
+  >
+    Berita
+  </a>
+</motion.div>
       </div>
 
       {/* Wave bawah dengan efek smooth scrolling */}

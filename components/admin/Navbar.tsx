@@ -106,11 +106,8 @@ export default function Navbar() {
   };
 
   return (
-    <header
-      ref={navbarRef}
-      className={`fixed w-full top-0 z-50 transition-all duration-500 ${
-        scrolled || open ? "bg-white shadow-md" : "bg-white/95 backdrop-blur-md"
-      }`}
+   <header
+  ref={navbarRef}
     >
       <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* LOGO - Diperkecil untuk tablet */}
@@ -134,6 +131,7 @@ export default function Navbar() {
     <div className="text-xs text-gray-500 leading-tight">Pematang Seleng</div>
   </div>
 </div>
+
 
         {/* DESKTOP & TABLET MENU - Dioptimalkan untuk iPad */}
         <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-sm font-medium text-gray-700">
@@ -357,18 +355,18 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
             />
 
-            <motion.aside
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 30,
-                mass: 0.8
-              }}
-              className="absolute right-0 top-0 w-80 md:w-96 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
-            >
+           <motion.aside
+  initial={{ x: "100%" }}
+  animate={{ x: 0 }}
+  exit={{ x: "100%" }}
+  transition={{ 
+    type: "spring", 
+    stiffness: 300, 
+    damping: 30,
+    mass: 0.8
+  }}
+  className="absolute right-0 top-0 w-72 md:w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
+>
               {/* Header Sidebar */}
               <motion.div 
                 className="flex justify-between items-center mb-8"

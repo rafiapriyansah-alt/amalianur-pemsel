@@ -27,40 +27,15 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/about": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/about.js"
-    ],
-    "/contact": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/contact.js"
-    ],
     "/galeri": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/galeri.js"
     ],
-    "/news": [
+    "/kb": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/news.js"
-    ],
-    "/pendaftaran": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/pendaftaran.js"
-    ],
-    "/programs": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/programs.js"
-    ],
-    "/testimonials": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/testimonials.js"
+      "static/chunks/pages/kb.js"
     ]
   },
   "ampFirstPages": []

@@ -34,44 +34,65 @@ export default function Galeri() {
   const [name, setName] = useState("");
   const [commentText, setCommentText] = useState("");
   const [selectedGalleryId, setSelectedGalleryId] = useState<string | null>(null);
+  const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 🟢 Load awal
-  useEffect(() => {
-    async function load() {
+  // 🟢 EFFECT PERTAMA - YANG HARUS DIUBAH
+useEffect(() => {
+  let isMounted = true;
+
+  async function loadInitial() {
+    try {
+      // 🔥 PRIORITAS 1: Load gallery data saja dulu (yang paling penting)
       const { data: galleryData } = await supabase
         .from("gallery")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("id, title, image_url, category, created_at") // 🔥 Hanya field yang diperlukan
+        .order("created_at", { ascending: false })
+        .limit(20); // 🔥 Batasi jumlah data untuk loading cepat
 
-      const { data: likeData } = await supabase.from("gallery_likes").select("gallery_id, user_ip");
-      const { data: shareData } = await supabase.from("gallery_shares").select("gallery_id");
-      
-      const likeCount: Record<string, number> = {};
-      const shareCount: Record<string, number> = {};
-      const userLikeStatus: Record<string, boolean> = {};
+      if (isMounted && galleryData) {
+        setGallery(galleryData);
+      }
 
-      likeData?.forEach((l) => {
-        likeCount[l.gallery_id] = (likeCount[l.gallery_id] || 0) + 1;
-        // Simulasi user like status (dalam real app, gunakan user session/ip)
-        if (l.user_ip === "dummy-ip") {
-          userLikeStatus[l.gallery_id] = true;
+      // 🔥 PRIORITAS 2: Load likes & shares secara PARALEL (setelah gallery muncul)
+      const [likeResult, shareResult] = await Promise.allSettled([
+        supabase.from("gallery_likes").select("gallery_id"),
+        supabase.from("gallery_shares").select("gallery_id")
+      ]);
+
+      if (isMounted) {
+        // Process likes - lebih sederhana
+        if (likeResult.status === 'fulfilled' && likeResult.value.data) {
+          const likeCount: Record<string, number> = {};
+          likeResult.value.data.forEach((l) => {
+            likeCount[l.gallery_id] = (likeCount[l.gallery_id] || 0) + 1;
+          });
+          setLikes(likeCount);
         }
-      });
 
-      shareData?.forEach((s) => {
-        shareCount[s.gallery_id] = (shareCount[s.gallery_id] || 0) + 1;
-      });
-
-      setGallery(galleryData || []);
-      setLikes(likeCount);
-      setShares(shareCount);
-      setUserLikes(userLikeStatus);
+        // Process shares - lebih sederhana  
+        if (shareResult.status === 'fulfilled' && shareResult.value.data) {
+          const shareCount: Record<string, number> = {};
+          shareResult.value.data.forEach((s) => {
+            shareCount[s.gallery_id] = (shareCount[s.gallery_id] || 0) + 1;
+          });
+          setShares(shareCount);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading gallery:", error);
     }
-    load();
-  }, []);
+  }
+
+  loadInitial();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   // 🔴 Realtime updates
   useEffect(() => {
@@ -167,6 +188,7 @@ export default function Galeri() {
     const galleryItem = gallery[index];
     setOpenIndex(index);
     setSelectedGalleryId(galleryItem.id);
+    setShowComments(false);
     
     // Load komentar
     const { data } = await supabase
@@ -201,7 +223,7 @@ export default function Galeri() {
     }
   }, [name, commentText, selectedGalleryId]);
 
-  // 🖱️ Scroll navigation untuk mobile/tablet
+  // 🖱️ Scroll navigation untuk mobile
   const handleWheel = useCallback((e: WheelEvent) => {
     if (openIndex === null || !containerRef.current || window.innerWidth >= 768) return;
     
@@ -224,10 +246,6 @@ export default function Galeri() {
       openFullscreen(openIndex - 1);
     } else if (e.key === 'Escape') {
       setOpenIndex(null);
-    } else if (e.key === 'ArrowLeft' && openIndex > 0) {
-      openFullscreen(openIndex - 1);
-    } else if (e.key === 'ArrowRight' && openIndex < gallery.length - 1) {
-      openFullscreen(openIndex + 1);
     }
   }, [openIndex, gallery.length, openFullscreen]);
 
@@ -254,35 +272,30 @@ export default function Galeri() {
       <Head><title>Galeri — Yayasan Amalianur</title></Head>
       <div className="min-h-screen flex flex-col bg-green-50">
         <Navbar />
-        <main className="container mx-auto px-4 sm:px-6 pt-28 pb-16 flex-1">
-          <h1 className="text-3xl sm:text-4xl font-bold text-green-800 text-center mb-8 sm:mb-10">Galeri Kegiatan</h1>
+        <main className="container mx-auto px-6 pt-32 pb-16 flex-1">
+          <h1 className="text-4xl font-bold text-green-800 text-center mb-10">Galeri Kegiatan</h1>
 
-          {/* Grid untuk Mobile & Tablet */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {gallery.map((g, i) => (
               <motion.div
                 key={g.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-lg sm:rounded-xl shadow hover:shadow-lg overflow-hidden cursor-pointer relative aspect-square"
+                className="bg-white rounded-xl shadow hover:shadow-lg overflow-hidden cursor-pointer relative"
                 onClick={() => openFullscreen(i)}
               >
-                <img 
-                  src={g.image_url} 
-                  alt={g.title} 
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                  <h4 className="font-semibold text-white text-sm sm:text-base line-clamp-1">{g.title}</h4>
-                  <div className="text-xs text-green-200">{g.category}</div>
+                <img src={g.image_url} alt={g.title} className="w-full h-64 object-cover" />
+                <div className="p-3">
+                  <h4 className="font-semibold text-green-800">{g.title}</h4>
+                  <div className="text-sm text-gray-500">{g.category}</div>
                 </div>
               </motion.div>
             ))}
           </div>
         </main>
 
-        {/* FULLSCREEN VIEW */}
+        {/* FULLSCREEN VIEW - Desktop & Mobile */}
         <AnimatePresence>
           {openIndex !== null && currentImage && (
             <motion.div
@@ -292,149 +305,129 @@ export default function Galeri() {
               exit={{ opacity: 0 }}
               ref={containerRef}
             >
-              {/* Desktop Layout - Side by Side */}
-              <div className="hidden md:flex w-full h-full">
+              {/* Desktop Layout - Side by Side (TETAP PERTAHANKAN) */}
+              <div className="hidden md:flex w-full h-full bg-white">
+                {/* Close Button */}
+                <button 
+                  className="absolute top-6 right-6 text-gray-600 z-10 bg-white/80 rounded-full p-2 hover:bg-white transition"
+                  onClick={() => setOpenIndex(null)}
+                >
+                  <X size={24} />
+                </button>
+
                 {/* Image Section */}
-                <div className="flex-1 flex items-center justify-center bg-black relative">
-                  <button 
-                    className="absolute top-6 left-6 text-white z-10 bg-black/50 rounded-full p-2 hover:bg-black/70 transition"
-                    onClick={() => setOpenIndex(null)}
-                  >
-                    <X size={24} />
-                  </button>
-                  
-                  {/* Navigation Arrows - Desktop */}
-                  {openIndex > 0 && (
-                    <button
-                      onClick={() => openFullscreen(openIndex - 1)}
-                      className="absolute left-6 top-1/2 transform -translate-y-1/2 text-white bg-black/50 rounded-full p-3 hover:bg-black/70 transition"
-                    >
-                      <ChevronUp size={24} className="rotate-90" />
-                    </button>
-                  )}
-                  {openIndex < gallery.length - 1 && (
-                    <button
-                      onClick={() => openFullscreen(openIndex + 1)}
-                      className="absolute right-6 top-1/2 transform -translate-y-1/2 text-white bg-black/50 rounded-full p-3 hover:bg-black/70 transition"
-                    >
-                      <ChevronDown size={24} className="rotate-90" />
-                    </button>
-                  )}
-                  
+                <div className="flex-1 flex items-center justify-center bg-gray-100 p-8">
                   <motion.img
                     src={currentImage.image_url}
                     alt={currentImage.title}
-                    className="max-w-full max-h-full object-contain"
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   />
 
-                  {/* Image Counter - Desktop */}
-                  <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 text-white bg-black/50 rounded-full px-4 py-2 text-sm">
-                    {openIndex + 1} / {gallery.length}
-                  </div>
+                  {/* Navigation Arrows untuk Desktop */}
+                  {openIndex > 0 && (
+                    <button
+                      onClick={() => openFullscreen(openIndex - 1)}
+                      className="absolute left-8 top-1/2 transform -translate-y-1/2 text-gray-600 bg-white/80 rounded-full p-3 hover:bg-white transition shadow-lg"
+                    >
+                      <ChevronUp size={28} className="rotate-90" />
+                    </button>
+                  )}
+                  {openIndex < gallery.length - 1 && (
+                    <button
+                      onClick={() => openFullscreen(openIndex + 1)}
+                      className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-600 bg-white/80 rounded-full p-3 hover:bg-white transition shadow-lg"
+                    >
+                      <ChevronDown size={28} className="rotate-90" />
+                    </button>
+                  )}
                 </div>
 
-                {/* Comments Section - Desktop */}
-                <div className="w-96 bg-white flex flex-col">
-                  {/* Header */}
-                  <div className="p-6 border-b">
-                    <div className="flex justify-between items-start mb-4">
-                      <h2 className="font-bold text-xl text-gray-800 flex-1">{currentImage.title}</h2>
-                      <button 
-                        onClick={() => setOpenIndex(null)}
-                        className="md:hidden text-gray-500 hover:text-gray-700"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">{likes[currentImage.id] || 0}</span>
-                        <span>Likes</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">{comments.length}</span>
-                        <span>Komentar</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium">{shares[currentImage.id] || 0}</span>
-                        <span>Share</span>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-gray-500">
+                {/* Sidebar Section - Komentar & Info */}
+                <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+                  {/* Header Info */}
+                  <div className="p-6 border-b border-gray-200">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">{currentImage.title}</h2>
+                    <p className="text-sm text-gray-600 mb-1">
                       {new Date(currentImage.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric'
                       })}
                     </p>
-                    
                     {currentImage.description && (
-                      <p className="text-gray-700 mt-3 text-sm">{currentImage.description}</p>
+                      <p className="text-sm text-gray-700 mt-3">{currentImage.description}</p>
                     )}
-                  </div>
-
-                  {/* Action Buttons - Desktop */}
-                  <div className="p-4 border-b">
-                    <div className="flex gap-6">
-                      <button 
-                        onClick={() => handleLove(currentImage.id)}
-                        className="flex items-center gap-2 text-gray-700 hover:text-red-500 transition-colors disabled:opacity-50"
-                        disabled={isLiking}
-                      >
-                        <motion.div
-                          animate={{ 
-                            scale: userLikes[currentImage.id] ? [1, 1.3, 1] : 1
-                          }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <Heart 
-                            size={24} 
-                            fill={userLikes[currentImage.id] ? "currentColor" : "none"}
-                            color={userLikes[currentImage.id] ? "#ef4444" : "currentColor"}
-                          />
-                        </motion.div>
-                        <span className="font-medium">{likes[currentImage.id] || 0}</span>
-                      </button>
-                      
-                      <button 
-                        onClick={() => handleShare(currentImage.id)}
-                        className="flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors"
-                      >
-                        <Share2 size={24} />
-                        <span className="font-medium">{shares[currentImage.id] || 0}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Comments List - Desktop */}
-                  <div className="flex-1 overflow-y-auto">
-                    <div className="p-4 border-b">
-                      <h3 className="font-semibold text-gray-800">Komentar ({comments.length})</h3>
-                    </div>
                     
-                    <div className="p-4">
+                    {/* Stats */}
+                    <div className="flex gap-6 mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleLove(currentImage.id)}
+                          className="flex items-center gap-2 text-gray-600 hover:text-red-500 transition-colors"
+                          disabled={isLiking}
+                        >
+                          <motion.div
+                            animate={{ 
+                              scale: userLikes[currentImage.id] ? [1, 1.2, 1] : 1
+                            }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <Heart 
+                              size={20} 
+                              fill={userLikes[currentImage.id] ? "currentColor" : "none"}
+                              color={userLikes[currentImage.id] ? "#ef4444" : "currentColor"}
+                            />
+                          </motion.div>
+                          <span className="font-medium">{likes[currentImage.id] || 0}</span>
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MessageCircle size={20} />
+                        <span className="font-medium">{comments.length}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleShare(currentImage.id)}
+                          className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors"
+                        >
+                          <Share2 size={20} />
+                          <span className="font-medium">{shares[currentImage.id] || 0}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comments Section */}
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="p-6">
+                      <h3 className="font-semibold text-gray-800 mb-4">Komentar ({comments.length})</h3>
+                      
                       {comments.length === 0 ? (
                         <div className="text-center text-gray-500 py-8">
-                          Belum ada komentar
+                          <MessageCircle size={48} className="mx-auto mb-3 text-gray-300" />
+                          <p>Belum ada komentar</p>
+                          <p className="text-sm mt-1">Jadilah yang pertama berkomentar!</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
                           {comments.map((comment) => (
-                            <div key={comment.id} className="flex gap-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-semibold text-gray-800 text-sm">{comment.name}</span>
-                                  <span className="text-xs text-gray-400">
-                                    {new Date(comment.created_at).toLocaleDateString('id-ID')}
-                                  </span>
-                                </div>
-                                <p className="text-gray-700 text-sm">{comment.comment}</p>
+                            <div key={comment.id} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="font-semibold text-gray-800 text-sm">{comment.name}</span>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(comment.created_at).toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </span>
                               </div>
+                              <p className="text-gray-700 text-sm">{comment.comment}</p>
                             </div>
                           ))}
                         </div>
@@ -442,15 +435,15 @@ export default function Galeri() {
                     </div>
                   </div>
 
-                  {/* Comment Input - Desktop */}
-                  <div className="p-4 border-t">
+                  {/* Comment Input */}
+                  <div className="p-6 border-t border-gray-200 bg-white">
                     <div className="space-y-3">
                       <input
                         type="text"
                         placeholder="Nama kamu"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                       <div className="flex gap-2">
                         <input
@@ -460,14 +453,15 @@ export default function Galeri() {
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
                           onKeyPress={(e) => e.key === 'Enter' && sendComment()}
-                          className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                         <button
                           onClick={sendComment}
                           disabled={!name.trim() || !commentText.trim()}
-                          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
                         >
                           <Send size={16} />
+                          <span className="hidden sm:inline">Kirim</span>
                         </button>
                       </div>
                     </div>
@@ -475,158 +469,216 @@ export default function Galeri() {
                 </div>
               </div>
 
-              {/* Mobile & Tablet Layout - Vertical Scroll */}
-              <div className="md:hidden w-full h-full overflow-y-auto bg-black">
-                <button 
-                  className="absolute top-4 left-4 text-white z-10 bg-black/50 rounded-full p-2"
-                  onClick={() => setOpenIndex(null)}
-                >
-                  <X size={24} />
-                </button>
-                
-                {/* Image */}
-                <div className="w-full bg-black flex items-center justify-center pt-16 pb-4">
-                  <motion.img
-                    src={currentImage.image_url}
-                    alt={currentImage.title}
-                    className="w-full max-w-lg object-contain"
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                  />
+              {/* Mobile & Tablet Layout - DIPERBAIKI */}
+              <div className="md:hidden w-full h-full bg-white flex flex-col">
+                {/* Header */}
+                <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center text-gray-800">
+                  <button 
+                    onClick={() => setOpenIndex(null)}
+                    className="bg-gray-200 rounded-full p-2 hover:bg-gray-300 text-gray-600"
+                  >
+                    <X size={24} />
+                  </button>
+                  <div className="text-sm opacity-80 bg-gray-200 px-3 py-1 rounded-full">
+                    {openIndex + 1} / {gallery.length}
+                  </div>
                 </div>
 
-                {/* Content */}
-                <div className="bg-white rounded-t-3xl p-6 -mt-6 relative z-20">
-                  {/* Header */}
-                  <div className="mb-6">
-                    <h2 className="font-bold text-xl text-gray-800">{currentImage.title}</h2>
-                    <p className="text-sm text-gray-500 mt-1">
+                {/* Image Container - Full Screen */}
+                <div className="flex-1 flex items-center justify-center relative">
+                  <motion.img
+                    key={currentImage.id}
+                    src={currentImage.image_url}
+                    alt={currentImage.title}
+                    className="w-full h-full object-contain"
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
+
+                  {/* Navigation Arrows untuk Mobile */}
+                  {openIndex > 0 && (
+                    <button
+                      onClick={() => openFullscreen(openIndex - 1)}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white bg-black/50 rounded-full p-3 hover:bg-black/70 transition"
+                    >
+                      <ChevronUp size={28} className="rotate-90" />
+                    </button>
+                  )}
+                  {openIndex < gallery.length - 1 && (
+                    <button
+                      onClick={() => openFullscreen(openIndex + 1)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-black/50 rounded-full p-3 hover:bg-black/70 transition"
+                    >
+                      <ChevronDown size={28} className="rotate-90" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Bottom Action Bar - Sederhana dan Clean */}
+                <div className="bg-gradient-to-t from-black/90 to-transparent pt-8 pb-6 px-6 text-white">
+                  {/* Image Info */}
+                  <div className="mb-4">
+                    <h2 className="text-lg font-bold mb-1">{currentImage.title}</h2>
+                    <p className="text-xs opacity-80">
                       {new Date(currentImage.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric'
                       })}
                     </p>
-                    {currentImage.description && (
-                      <p className="text-sm text-gray-600 mt-2">{currentImage.description}</p>
-                    )}
-                    
-                    <div className="flex gap-4 mt-3 text-sm text-gray-500">
-                      <span>{likes[currentImage.id] || 0} Likes</span>
-                      <span>{comments.length} Comments</span>
-                      <span>{shares[currentImage.id] || 0} Shares</span>
+                  </div>
+
+                  {/* Action Buttons - Minimalis */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      {/* Like Button */}
+                      <button 
+                        onClick={() => handleLove(currentImage.id)}
+                        className="flex flex-col items-center gap-1 transition-all"
+                        disabled={isLiking}
+                      >
+                        <motion.div
+                          animate={{ 
+                            scale: userLikes[currentImage.id] ? [1, 1.3, 1] : 1
+                          }}
+                          transition={{ duration: 0.4 }}
+                        >
+                          <Heart 
+                            size={28} 
+                            fill={userLikes[currentImage.id] ? "#ef4444" : "none"}
+                            color={userLikes[currentImage.id] ? "#ef4444" : "white"}
+                          />
+                        </motion.div>
+                        <span className="text-xs font-medium">{likes[currentImage.id] || 0}</span>
+                      </button>
+
+                      {/* Comment Button */}
+                      <button 
+                        onClick={() => setShowComments(true)}
+                        className="flex flex-col items-center gap-1 transition-all"
+                      >
+                        <MessageCircle size={28} color="white" />
+                        <span className="text-xs font-medium">{comments.length}</span>
+                      </button>
+
+                      {/* Share Button */}
+                      <button 
+                        onClick={() => handleShare(currentImage.id)}
+                        className="flex flex-col items-center gap-1 transition-all"
+                      >
+                        <Share2 size={28} color="white" />
+                        <span className="text-xs font-medium">{shares[currentImage.id] || 0}</span>
+                      </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-6 mb-6 pb-4 border-b">
-                    <button 
-                      onClick={() => handleLove(currentImage.id)}
-                      className="flex items-center gap-2 text-gray-700 hover:text-red-500 transition-colors flex-1 justify-center"
-                      disabled={isLiking}
-                    >
-                      <motion.div
-                        animate={{ 
-                          scale: userLikes[currentImage.id] ? [1, 1.2, 1] : 1
-                        }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Heart 
-                          size={28} 
-                          fill={userLikes[currentImage.id] ? "currentColor" : "none"}
-                          color={userLikes[currentImage.id] ? "#ef4444" : "currentColor"}
-                        />
-                      </motion.div>
-                      <span className="font-medium">{likes[currentImage.id] || 0}</span>
-                    </button>
-                    
-                    <button 
-                      onClick={() => handleShare(currentImage.id)}
-                      className="flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors flex-1 justify-center"
-                    >
-                      <Share2 size={28} />
-                      <span className="font-medium">{shares[currentImage.id] || 0}</span>
-                    </button>
+        {/* Comments Panel untuk Mobile & Tablet - DIPERBAIKI */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              className="fixed inset-0 z-50 md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {/* Backdrop */}
+              <div 
+                className="absolute inset-0 bg-black/50"
+                onClick={() => setShowComments(false)}
+              />
+              
+              {/* Comments Panel */}
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[85vh] flex flex-col"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ 
+                  type: "spring", 
+                  damping: 25,
+                  stiffness: 300
+                }}
+              >
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 text-lg">
+                      Komentar
+                    </h3>
+                    <p className="text-sm text-gray-500">{comments.length} komentar</p>
                   </div>
+                  <button
+                    onClick={() => setShowComments(false)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition"
+                  >
+                    <X size={20} className="text-gray-600" />
+                  </button>
+                </div>
 
-                  {/* Comments List */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-gray-800 mb-4">Komentar ({comments.length})</h3>
-                    {comments.length === 0 ? (
-                      <div className="text-center text-gray-500 py-4">
-                        Belum ada komentar
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {comments.map((comment) => (
-                          <div key={comment.id}>
-                            <div className="flex justify-between items-start">
-                              <span className="font-semibold text-sm">{comment.name}</span>
+                {/* Comments List */}
+                <div className="flex-1 overflow-y-auto">
+                  {comments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <MessageCircle size={48} className="mx-auto mb-3 text-gray-300" />
+                      <p className="text-gray-500 font-medium">Belum ada komentar</p>
+                      <p className="text-sm text-gray-400 mt-1">Jadilah yang pertama berkomentar!</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 space-y-4">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="flex gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-800 text-sm">{comment.name}</span>
                               <span className="text-xs text-gray-400">
                                 {new Date(comment.created_at).toLocaleDateString('id-ID')}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-700 mt-1">{comment.comment}</p>
+                            <p className="text-gray-700 text-sm leading-relaxed">{comment.comment}</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                  {/* Comment Input */}
+                {/* Comment Input */}
+                <div className="p-4 border-t border-gray-200 bg-white">
                   <div className="space-y-3">
                     <input
                       type="text"
                       placeholder="Nama kamu"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                     <div className="flex gap-2">
                       <input
+                        ref={commentInputRef}
                         type="text"
                         placeholder="Tulis komentar..."
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && sendComment()}
-                        className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                       <button
                         onClick={sendComment}
                         disabled={!name.trim() || !commentText.trim()}
-                        className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-green-600 text-white px-4 py-3 rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center min-w-[60px]"
                       >
                         <Send size={20} />
                       </button>
                     </div>
                   </div>
-
-                  {/* Navigation for Mobile */}
-                  <div className="flex justify-between mt-6 pt-4 border-t">
-                    {openIndex > 0 && (
-                      <button
-                        onClick={() => openFullscreen(openIndex - 1)}
-                        className="flex items-center gap-2 text-green-600 hover:text-green-700"
-                      >
-                        <ChevronUp size={20} className="rotate-90" />
-                        <span>Sebelumnya</span>
-                      </button>
-                    )}
-                    <div className="text-sm text-gray-500 mx-auto">
-                      {openIndex + 1} / {gallery.length}
-                    </div>
-                    {openIndex < gallery.length - 1 && (
-                      <button
-                        onClick={() => openFullscreen(openIndex + 1)}
-                        className="flex items-center gap-2 text-green-600 hover:text-green-700 ml-auto"
-                      >
-                        <span>Berikutnya</span>
-                        <ChevronDown size={20} className="rotate-90" />
-                      </button>
-                    )}
-                  </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

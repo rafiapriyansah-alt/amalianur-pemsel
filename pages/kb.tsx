@@ -201,7 +201,7 @@ export default function KB() {
               <motion.h1
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-bold text-green-800 leading-tight"
+                className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-green-800 leading-tight"
               >
                 {data.title || "Kelompok Bermain Amalianur"}
               </motion.h1>
@@ -229,7 +229,7 @@ export default function KB() {
               <img
                 src={data.headmaster_photo}
                 alt={data.headmaster}
-                className="rounded-2xl lg:rounded-xl xl:rounded-2xl shadow-xl lg:shadow-lg object-cover w-full max-w-md h-80 sm:h-96 lg:h-80 xl:h-96"
+                className="rounded-xl sm:rounded-2xl lg:rounded-xl p-4 sm:p-6 lg:p-6 xl:p-8-xl xl:rounded-2xl shadow-xl lg:shadow-lg object-cover w-full max-w-md h-80 sm:h-96 lg:h-80 xl:h-96"
               />
             </motion.div>
             <motion.div
