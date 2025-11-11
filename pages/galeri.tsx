@@ -36,45 +36,66 @@ export default function Galeri() {
   const [selectedGalleryId, setSelectedGalleryId] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState<Record<string, boolean>>({});
   const commentInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🟢 Load awal
-  // 🟡 EFFECT PERTAMA - Sekarang ini yang menyebabkan delay
-useEffect(() => {
-  async function load() {
-    // ❌ SEMUA data diload sekaligus
-    const { data: galleryData } = await supabase
-      .from("gallery")
-      .select("*")
-      .order("created_at", { ascending: false });
+  // 🟢 PERBAIKAN: Load data dengan optimisasi
+  useEffect(() => {
+    async function load() {
+      try {
+        console.time('LoadGalleryData');
+        
+        // Load data secara paralel
+        const [galleryResponse, likeResponse, shareResponse] = await Promise.all([
+          supabase.from("gallery").select("*").order("created_at", { ascending: false }),
+          supabase.from("gallery_likes").select("gallery_id, user_ip"),
+          supabase.from("gallery_shares").select("gallery_id")
+        ]);
 
-    const { data: likeData } = await supabase.from("gallery_likes").select("gallery_id, user_ip");
-    const { data: shareData } = await supabase.from("gallery_shares").select("gallery_id");
-    
-    const likeCount: Record<string, number> = {};
-    const shareCount: Record<string, number> = {};
-    const userLikeStatus: Record<string, boolean> = {};
+        const galleryData = galleryResponse.data || [];
+        const likeData = likeResponse.data || [];
+        const shareData = shareResponse.data || [];
 
-    // ❌ Processing yang berat
-    likeData?.forEach((l) => {
-      likeCount[l.gallery_id] = (likeCount[l.gallery_id] || 0) + 1;
-      if (l.user_ip === "dummy-ip") {
-        userLikeStatus[l.gallery_id] = true;
+        // Set gallery data FIRST untuk memulai loading gambar
+        setGallery(galleryData);
+
+        // Preload images
+        galleryData.forEach((item) => {
+          const img = new Image();
+          img.src = item.image_url;
+          img.onload = () => {
+            setImageLoaded(prev => ({ ...prev, [item.id]: true }));
+          };
+        });
+
+        // Process likes and shares
+        const likeCount: Record<string, number> = {};
+        const shareCount: Record<string, number> = {};
+        const userLikeStatus: Record<string, boolean> = {};
+
+        likeData.forEach((l) => {
+          likeCount[l.gallery_id] = (likeCount[l.gallery_id] || 0) + 1;
+          if (l.user_ip === "dummy-ip") {
+            userLikeStatus[l.gallery_id] = true;
+          }
+        });
+
+        shareData.forEach((s) => {
+          shareCount[s.gallery_id] = (shareCount[s.gallery_id] || 0) + 1;
+        });
+
+        setLikes(likeCount);
+        setShares(shareCount);
+        setUserLikes(userLikeStatus);
+        
+        console.timeEnd('LoadGalleryData');
+      } catch (error) {
+        console.error('Error loading gallery:', error);
       }
-    });
-
-    shareData?.forEach((s) => {
-      shareCount[s.gallery_id] = (shareCount[s.gallery_id] || 0) + 1;
-    });
-
-    setGallery(galleryData || []);
-    setLikes(likeCount);
-    setShares(shareCount);
-    setUserLikes(userLikeStatus);
-  }
-  load();
-}, []);
+    }
+    load();
+  }, []);
 
   // 🔴 Realtime updates
   useEffect(() => {
@@ -127,10 +148,8 @@ useEffect(() => {
 
     try {
       if (wasLiked) {
-        // Unlike - dalam real app, perlu hapus based on user_ip
         await supabase.from("gallery_likes").delete().eq("gallery_id", galleryId).eq("user_ip", "dummy-ip");
       } else {
-        // Like
         await supabase.from("gallery_likes").insert([{ gallery_id: galleryId, user_ip: "dummy-ip" }]);
       }
     } catch (error) {
@@ -247,34 +266,142 @@ useEffect(() => {
     };
   }, [openIndex, handleWheel, handleKeyDown]);
 
+  // Handle image load
+  const handleImageLoad = useCallback((galleryId: string) => {
+    setImageLoaded(prev => ({ ...prev, [galleryId]: true }));
+  }, []);
+
   const currentImage = openIndex !== null ? gallery[openIndex] : null;
+
+  // Animasi untuk container judul
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 20 
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut" as const
+      }
+    }
+  };
+
+  // Variants untuk grid galeri
+  const gridVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 20 
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut" as const
+      }
+    }
+  };
 
   return (
     <>
-      <Head><title>Galeri — Yayasan Amalianur</title></Head>
+      <Head>
+        <title>Galeri — Yayasan Amalianur</title>
+        {/* Preconnect untuk optimasi loading */}
+        <link rel="preconnect" href="https://your-image-domain.com" />
+      </Head>
       <div className="min-h-screen flex flex-col bg-green-50">
         <Navbar />
         <main className="container mx-auto px-6 pt-32 pb-16 flex-1">
-          <h1 className="text-4xl font-bold text-green-800 text-center mb-10">Galeri Kegiatan</h1>
+          {/* JUDUL GALERI DENGAN ANIMASI */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="text-center mb-10"
+          >
+            <motion.h1 
+              variants={itemVariants}
+              className="text-4xl font-bold text-green-800 mb-4"
+            >
+              Galeri Kegiatan
+            </motion.h1>
+            <motion.p 
+              variants={itemVariants}
+              className="text-lg text-green-600 max-w-2xl mx-auto"
+            >
+              Dokumentasi berbagai kegiatan dan program Yayasan Amalianur
+            </motion.p>
+          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          {/* GRID GALERI DENGAN OPTIMISASI LOADING */}
+          <motion.div 
+            className="grid md:grid-cols-3 gap-6"
+            variants={gridVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {gallery.map((g, i) => (
               <motion.div
                 key={g.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
+                variants={cardVariants}
                 className="bg-white rounded-xl shadow hover:shadow-lg overflow-hidden cursor-pointer relative"
                 onClick={() => openFullscreen(i)}
               >
-                <img src={g.image_url} alt={g.title} className="w-full h-64 object-cover" />
+                {/* PERBAIKAN: Image dengan loading state */}
+                <div className="relative w-full h-64 bg-gray-200 overflow-hidden">
+                  {!imageLoaded[g.id] && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 border-3 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <img 
+                    src={g.image_url} 
+                    alt={g.title} 
+                    className={`w-full h-64 object-cover transition-opacity duration-300 ${
+                      imageLoaded[g.id] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onLoad={() => handleImageLoad(g.id)}
+                    loading="lazy" // Lazy loading untuk performa
+                  />
+                </div>
                 <div className="p-3">
                   <h4 className="font-semibold text-green-800">{g.title}</h4>
                   <div className="text-sm text-gray-500">{g.category}</div>
                 </div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
+
+          {/* Loading State saat data belum ada */}
+          {gallery.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Memuat galeri...</p>
+            </div>
+          )}
         </main>
 
         {/* FULLSCREEN VIEW - Desktop & Mobile */}
@@ -287,7 +414,7 @@ useEffect(() => {
               exit={{ opacity: 0 }}
               ref={containerRef}
             >
-              {/* Desktop Layout - Side by Side (TETAP PERTAHANKAN) */}
+              {/* Desktop Layout - Side by Side */}
               <div className="hidden md:flex w-full h-full bg-white">
                 {/* Close Button */}
                 <button 
@@ -297,16 +424,26 @@ useEffect(() => {
                   <X size={24} />
                 </button>
 
-                {/* Image Section */}
+                {/* Image Section dengan Loading */}
                 <div className="flex-1 flex items-center justify-center bg-gray-100 p-8">
-                  <motion.img
-                    src={currentImage.image_url}
-                    alt={currentImage.title}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
+                  <div className="relative">
+                    {!imageLoaded[currentImage.id] && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    <motion.img
+                      src={currentImage.image_url}
+                      alt={currentImage.title}
+                      className={`max-w-full max-h-full object-contain rounded-lg shadow-lg transition-opacity duration-300 ${
+                        imageLoaded[currentImage.id] ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: imageLoaded[currentImage.id] ? 1 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      onLoad={() => handleImageLoad(currentImage.id)}
+                    />
+                  </div>
 
                   {/* Navigation Arrows untuk Desktop */}
                   {openIndex > 0 && (
@@ -451,7 +588,7 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Mobile & Tablet Layout - DIPERBAIKI */}
+              {/* Mobile & Tablet Layout */}
               <div className="md:hidden w-full h-full bg-white flex flex-col">
                 {/* Header */}
                 <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center text-gray-800">
@@ -466,17 +603,27 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Image Container - Full Screen */}
+                {/* Image Container - Full Screen dengan Loading */}
                 <div className="flex-1 flex items-center justify-center relative">
-                  <motion.img
-                    key={currentImage.id}
-                    src={currentImage.image_url}
-                    alt={currentImage.title}
-                    className="w-full h-full object-contain"
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  />
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {!imageLoaded[currentImage.id] && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    <motion.img
+                      key={currentImage.id}
+                      src={currentImage.image_url}
+                      alt={currentImage.title}
+                      className={`w-full h-full object-contain transition-opacity duration-300 ${
+                        imageLoaded[currentImage.id] ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: imageLoaded[currentImage.id] ? 1 : 0 }}
+                      transition={{ duration: 0.3 }}
+                      onLoad={() => handleImageLoad(currentImage.id)}
+                    />
+                  </div>
 
                   {/* Navigation Arrows untuk Mobile */}
                   {openIndex > 0 && (
@@ -497,7 +644,7 @@ useEffect(() => {
                   )}
                 </div>
 
-                {/* Bottom Action Bar - Sederhana dan Clean */}
+                {/* Bottom Action Bar */}
                 <div className="bg-gradient-to-t from-black/90 to-transparent pt-8 pb-6 px-6 text-white">
                   {/* Image Info */}
                   <div className="mb-4">
@@ -511,7 +658,7 @@ useEffect(() => {
                     </p>
                   </div>
 
-                  {/* Action Buttons - Minimalis */}
+                  {/* Action Buttons */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
                       {/* Like Button */}
@@ -560,7 +707,7 @@ useEffect(() => {
           )}
         </AnimatePresence>
 
-        {/* Comments Panel untuk Mobile & Tablet - DIPERBAIKI */}
+        {/* Comments Panel untuk Mobile & Tablet */}
         <AnimatePresence>
           {showComments && (
             <motion.div

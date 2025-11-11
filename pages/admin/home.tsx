@@ -274,25 +274,7 @@ export default function AdminHome() {
                 />
               )}
             </div>
-            <div>
-              <label className="block text-sm text-gray-600">
-                Tanda Tangan (image)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleSingleUpload(e, "ttd_photo")}
-              />
-              {form.ttd_photo && (
-                <Image
-                  src={form.ttd_photo}
-                  alt="ttd"
-                  width={200}
-                  height={100}
-                  className="mt-2 rounded shadow"
-                />
-              )}
-            </div>
+            
           </div>
         </section>
 

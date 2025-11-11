@@ -2,8 +2,10 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/admin/news": "pages/admin/news.js",
-  "/admin/testimonials": "pages/admin/testimonials.js",
-  "/admin/galeri": "pages/admin/galeri.js",
-  "/admin/programs": "pages/admin/programs.js"
+  "/galeri": "pages/galeri.js",
+  "/admin/programs": "pages/admin/programs.js",
+  "/": "pages/index.js",
+  "/about": "pages/about.js",
+  "/news": "pages/news.js",
+  "/programs": "pages/programs.js"
 }
