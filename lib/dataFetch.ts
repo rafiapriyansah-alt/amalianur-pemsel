@@ -1,5 +1,7 @@
 // lib/dataFetch.ts
-import { supabase } from "./supabaseClient";
+import { getSupabase } from "./supabaseClient";
+
+const supabase = getSupabase();
 
 export async function getNews() {
   const { data } = await supabase.from("news").select("*").order("date", { ascending: false });
