@@ -2,19 +2,33 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  
   images: {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "gspmrhanymtnzllaitiu.supabase.co", // domain Supabase kamu
-        pathname: "/storage/v1/object/public/**",     // path ke bucket Supabase
+        hostname: "gspmrhanymtnzllaitiu.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
       {
         protocol: "https",
-        hostname: "placehold.co", // kalau kamu masih pakai ini untuk dummy image
+        hostname: "placehold.co",
       },
     ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 86400,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+
+  // ✅ Optimasi dasar yang aman
+  compress: true,
+  poweredByHeader: false,
+  
+  // ✅ Tambahkan env jika perlu
+  env: {
+    CUSTOM_CACHE_DURATION: '86400',
   },
 }
 
-module.exports = nextConfig;
+module.exports = nextConfig

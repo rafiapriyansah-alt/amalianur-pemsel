@@ -2,8 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/admin/news": "pages/admin/news.js",
+  "/admin/testimonials": "pages/admin/testimonials.js",
   "/admin/galeri": "pages/admin/galeri.js",
-  "/": "pages/index.js",
-  "/about": "pages/about.js",
-  "/kb": "pages/kb.js"
+  "/admin/programs": "pages/admin/programs.js"
 }
