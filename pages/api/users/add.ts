@@ -1,10 +1,14 @@
-// ✅ pages/api/users/add.ts
+// ✅ pages/api/users/add.ts — versi cepat & aman
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
+// ✅ Supabase Admin Client dibuat sekali (di luar handler)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: { autoRefreshToken: false, persistSession: false },
+  }
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,61 +19,72 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { email, password, name, role, actor } = req.body;
 
-    if (!email || !password || !name || !role) {
+    // ✅ Validasi cepat
+    if (!email?.trim() || !password?.trim() || !name?.trim() || !role?.trim()) {
       return res.status(400).json({ success: false, message: "⚠️ Semua field wajib diisi." });
     }
 
-    // 🔹 1. Buat user di sistem Auth Supabase
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name, role },
-    });
+    // ✅ 1. Buat user di Supabase Auth
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { name, role },
+      });
 
     if (authError) {
       console.error("❌ Auth Error:", authError);
-      throw new Error(authError.message || "Gagal membuat user di Supabase Auth");
+      return res.status(400).json({
+        success: false,
+        message: authError.message || "Gagal membuat user di Supabase Auth",
+      });
     }
 
     const userId = authData.user?.id;
-    if (!userId) throw new Error("Gagal mendapatkan ID user dari Supabase Auth");
-
-    // 🔹 2. Simpan juga ke tabel public.users untuk dashboard
-    const { error: dbError } = await supabaseAdmin.from("users").upsert([
-      {
-        id: userId,
-        email,
-        name,
-        role,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-
-    if (dbError) {
-      console.error("❌ DB Error:", dbError);
-      throw new Error(dbError.message || "Gagal menambahkan user ke tabel users");
+    if (!userId) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Gagal mengambil ID user" });
     }
 
-    // 🔹 3. Catat log aktivitas (opsional)
-    await supabaseAdmin.from("activity_logs").insert([
-      {
-        actor: actor || "Super Admin",
-        action: "Create User",
-        details: `Menambahkan user ${name} (${email}) sebagai ${role}`,
-        created_at: new Date().toISOString(),
-      },
-    ]);
+    // ✅ 2. Upsert ke tabel users (CEPAT)
+    const dbPromise = supabaseAdmin.from("users").upsert({
+      id: userId,
+      email,
+      name,
+      role,
+      created_at: new Date().toISOString(),
+    });
+
+    // ✅ 3. Log aktivitas (jalan paralel)
+    const logPromise = supabaseAdmin.from("activity_logs").insert({
+      actor: actor || "Super Admin",
+      action: "Create User",
+      details: `Menambahkan user ${name} (${email}) sebagai ${role}`,
+      created_at: new Date().toISOString(),
+    });
+
+    // ✅ MENUNGGU KEDUA PROSES SECARA PARALEL (lebih cepat)
+    const [dbResult, logResult] = await Promise.all([dbPromise, logPromise]);
+
+    if (dbResult.error) {
+      console.error("❌ DB Error:", dbResult.error);
+      return res.status(500).json({
+        success: false,
+        message: dbResult.error.message || "Gagal menambahkan user ke database.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "✅ User berhasil dibuat dan bisa login ke sistem.",
+      message: "✅ User berhasil dibuat dan tercatat.",
     });
   } catch (err: any) {
-    console.error("🔥 Error adding user:", err);
+    console.error("🔥 Error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message || "Terjadi kesalahan saat menambahkan user.",
+      message: err.message || "Terjadi kesalahan server.",
     });
   }
 }

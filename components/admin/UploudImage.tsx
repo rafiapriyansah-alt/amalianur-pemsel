@@ -1,37 +1,43 @@
-// components/UploadImage.tsx
 "use client";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { uploadImageFile } from "../../utils/upload";
 
-export default function UploadImage({ onUploaded }: { onUploaded: (url: string) => void }) {
+interface UploadImageProps {
+  onUploaded: (url: string) => void;
+}
+
+export default function UploadImage({ onUploaded }: UploadImageProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  async function handleUpload() {
+  /** ✅ Optimal: gunakan useCallback agar tidak recreate function setiap render */
+  const handleUpload = useCallback(async () => {
     if (!file) return;
-    setUploading(true);
-    const result = await uploadImageFile(file, "gallery");
-    
-    // Handle both string and object return types
-    if (result) {
-      if (typeof result === 'string') {
-        onUploaded(result);
-      } else {
-        // Jika return berupa object, ambil publicUrl-nya
-        onUploaded(result.publicUrl);
+
+    try {
+      setUploading(true);
+      const result = await uploadImageFile(file, "gallery");
+
+      if (result) {
+        const url = typeof result === "string" ? result : result.publicUrl;
+        onUploaded(url);
       }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Gagal upload gambar. Coba lagi.");
+    } finally {
+      setUploading(false);
     }
-    
-    setUploading(false);
-  }
+  }, [file, onUploaded]);
 
   return (
     <div className="flex items-center gap-2">
-      <input 
-        type="file" 
-        onChange={(e) => setFile(e.target.files?.[0] || null)} 
+      <input
+        type="file"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
         className="border rounded p-2"
       />
+
       <button
         disabled={!file || uploading}
         onClick={handleUpload}

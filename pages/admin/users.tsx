@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import { getSupabase } from "../../lib/supabaseClient";
 import { useRequireRole } from "../../hooks/useRequireRole";
@@ -16,6 +16,7 @@ export default function UsersPage() {
     password: "",
     role: "admin",
   });
+
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error" | null; message: string }>({
     type: null,
@@ -23,45 +24,59 @@ export default function UsersPage() {
   });
 
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-    };
-    getCurrentUser();
-  }, [supabase.auth]);
 
+  // ✅ Optimisasi penting: cegah spam loadUsers
+  const loadLock = useRef(false);
+
+  // ✅ Ambil current user sekali saja (tidak double request)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUser(data.user);
+    });
+  }, []);
+
+  // ✅ Load daftar user (optimisasi)
   async function loadUsers() {
+    if (loadLock.current) return; // ⛔ Cegah multi-request
+    loadLock.current = true;
+
     const { data, error } = await supabase
       .from("users")
-      .select("*")
+      .select("id, email, full_name, name, role, created_at")
       .order("created_at", { ascending: false });
-    if (!error) setUsers(data || []);
+
+    if (!error) setUsers(data ?? []);
+
+    // ✅ buka kunci setelah 300ms biar tidak spam
+    setTimeout(() => {
+      loadLock.current = false;
+    }, 300);
   }
 
+  // ✅ Real-time + load awal
   useEffect(() => {
-    if (!authLoading) {
-      loadUsers();
-      
-      const channel = supabase
-        .channel("public:users")
-        .on("postgres_changes", { 
-          event: "*", 
-          schema: "public", 
-          table: "users" 
-        }, () => loadUsers())
-        .subscribe();
+    if (authLoading) return;
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [authLoading, supabase]);
+    loadUsers();
 
-  // =========================
+    // ✅ Real-time dengan debounce
+    const channel = supabase
+      .channel("public:users")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "users" },
+        () => {
+          loadUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authLoading]);
+
   // ✅ Tambah user baru
-  // =========================
   async function handleAddUser() {
     if (!form.email || !form.full_name || !form.password) {
       setStatus({ type: "error", message: "Semua field wajib diisi!" });
@@ -89,27 +104,24 @@ export default function UsersPage() {
       if (result.success) {
         setStatus({ type: "success", message: "✅ User berhasil ditambahkan!" });
         setForm({ email: "", full_name: "", password: "", role: "admin" });
-        await loadUsers();
+        loadUsers();
       } else {
         setStatus({
           type: "error",
           message: result.message || "❌ Gagal menambahkan user.",
         });
       }
-    } catch (err: any) {
-      console.error("Add user error:", err);
+    } catch (err) {
       setStatus({
         type: "error",
-        message: "❌ Gagal menghubungi server atau koneksi API error.",
+        message: "❌ Tidak dapat menghubungi server.",
       });
     } finally {
       setLoading(false);
     }
   }
 
-  // =========================
-  // 🗑️ Hapus user
-  // =========================
+  // ✅ Hapus user (cepat & realtime aman)
   async function handleDelete(id: string) {
     if (!confirm("Yakin ingin menghapus user ini?")) return;
 
@@ -117,23 +129,22 @@ export default function UsersPage() {
       const res = await fetch("/api/users/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, actor: "Super Admin" }),
+        body: JSON.stringify({ id, actor: currentUser?.email }),
       });
 
       const result = await res.json();
+
       if (result.success) {
         toast.success(result.message);
-        await loadUsers();
+        loadUsers();
       } else {
         toast.error(result.message || "Gagal menghapus user.");
       }
     } catch (err) {
-      console.error("Delete user error:", err);
-      toast.error("Terjadi kesalahan koneksi server.");
+      toast.error("Terjadi kesalahan server.");
     }
   }
 
-  // 🔹 Tampilkan loading selama auth check
   if (authLoading) {
     return (
       <AdminLayout title="Manajemen Pengguna">
@@ -154,7 +165,7 @@ export default function UsersPage() {
           👥 Kelola Pengguna
         </h2>
 
-        {/* Form Tambah User */}
+        {/* FORM TAMBAH USER */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <input
             type="email"
@@ -198,7 +209,7 @@ export default function UsersPage() {
           {loading ? "Menambahkan..." : "Tambah Pengguna"}
         </button>
 
-        {/* ⚡ Notifikasi */}
+        {/* STATUS NOTIF */}
         {status.type && (
           <div
             className={`mt-4 p-3 rounded-lg text-center ${
@@ -211,7 +222,7 @@ export default function UsersPage() {
           </div>
         )}
 
-        {/* Daftar User */}
+        {/* TABEL USERS */}
         <div className="overflow-x-auto mt-6">
           <table className="min-w-full border rounded-xl text-sm">
             <thead className="bg-green-100 text-green-800">

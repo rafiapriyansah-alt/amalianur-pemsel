@@ -3,10 +3,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSupabase } from "../../lib/supabaseClient";
-import { 
-  MapPin, Phone, Mail, Clock,
-  Facebook, Instagram, Youtube,
-  ChevronDown, School, Users, Building
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Facebook,
+  Instagram,
+  Youtube,
+  ChevronDown,
+  School,
+  Users,
+  Building,
 } from "lucide-react";
 
 interface SettingsData {
@@ -38,165 +46,113 @@ interface ContactData {
 
 export default function Footer() {
   const supabase = getSupabase();
+
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [contact, setContact] = useState<ContactData | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
+  // ✅ OPTIMAL: Fetch paralel + satu channel realtime
   useEffect(() => {
-    const load = async () => {
+    let mounted = true;
+
+    const loadData = async () => {
       try {
-        const settingsResult = await supabase.from("settings").select("*").single();
-        const contactResult = await supabase.from("contact").select("*").single();
-        
-        if (settingsResult.data) setSettings(settingsResult.data);
-        if (contactResult.data) setContact(contactResult.data);
+        const [settingsRes, contactRes] = await Promise.all([
+          supabase.from("settings").select("*").single(),
+          supabase.from("contact").select("*").single(),
+        ]);
+
+        if (!mounted) return;
+
+        if (settingsRes.data) setSettings(settingsRes.data);
+        if (contactRes.data) setContact(contactRes.data);
       } catch (error) {
-        console.error("Error loading footer data:", error);
+        console.error("Footer load error:", error);
       }
     };
 
-    load();
+    loadData();
 
-    const sub1 = supabase
-      .channel("settings-update")
-      .on("postgres_changes", { event: "*", schema: "public", table: "settings" },
-        () => supabase.from("settings").select("*").single().then(({ data }) => data && setSettings(data))
+    const channel = supabase
+      .channel("footer-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "settings" },
+        (payload) => {
+          if (mounted && payload.new) setSettings(payload.new as SettingsData);
+        }
       )
-      .subscribe();
-
-    const sub2 = supabase
-      .channel("contact-update")
-      .on("postgres_changes", { event: "*", schema: "public", table: "contact" },
-        () => supabase.from("contact").select("*").single().then(({ data }) => data && setContact(data))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "contact" },
+        (payload) => {
+          if (mounted && payload.new) setContact(payload.new as ContactData);
+        }
       )
       .subscribe();
 
     return () => {
-      sub1.unsubscribe();
-      sub2.unsubscribe();
+      mounted = false;
+      supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, []);
+
+  // ✅ Animasi aman untuk build (tanpa error framer-motion)
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: [0.42, 0, 0.58, 1] as const,
+      },
+    },
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { 
-        staggerChildren: 0.2 
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 30 
+      transition: { staggerChildren: 0.2 },
     },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { 
-        duration: 0.6, 
-        ease: "easeOut" as const
-      }
-    }
   };
 
   const socialLinks = [
-    { 
-      icon: Facebook, 
+    {
+      icon: Facebook,
       label: "Facebook",
       options: [
-        { 
-          name: "Yayasan Amalianur", 
-          href: settings?.facebook_yayasan || "#", 
-          icon: Building, 
-          hasLink: !!settings?.facebook_yayasan 
-        },
-        { 
-          name: "TK Amalianur", 
-          href: settings?.facebook_tk || "#", 
-          icon: School, 
-          hasLink: !!settings?.facebook_tk 
-        },
-        { 
-          name: "KB Amalianur", 
-          href: settings?.facebook_kb || "#", 
-          icon: Users, 
-          hasLink: !!settings?.facebook_kb 
-        },
-        { 
-          name: "MTs Amalianur", 
-          href: settings?.facebook_mts || "#", 
-          icon: School, 
-          hasLink: !!settings?.facebook_mts 
-        }
-      ].filter(v => v.hasLink)
+        { name: "Yayasan Amalianur", href: settings?.facebook_yayasan, icon: Building },
+        { name: "TK Amalianur", href: settings?.facebook_tk, icon: School },
+        { name: "KB Amalianur", href: settings?.facebook_kb, icon: Users },
+        { name: "MTs Amalianur", href: settings?.facebook_mts, icon: School },
+      ].filter((o) => o.href),
     },
-    { 
-      icon: Instagram, 
+    {
+      icon: Instagram,
       label: "Instagram",
       options: [
-        { 
-          name: "Yayasan Amalianur", 
-          href: settings?.instagram_yayasan || "#", 
-          icon: Building, 
-          hasLink: !!settings?.instagram_yayasan 
-        },
-        { 
-          name: "TK Amalianur", 
-          href: settings?.instagram_tk || "#", 
-          icon: School, 
-          hasLink: !!settings?.instagram_tk 
-        },
-        { 
-          name: "KB Amalianur", 
-          href: settings?.instagram_kb || "#", 
-          icon: Users, 
-          hasLink: !!settings?.instagram_kb 
-        },
-        { 
-          name: "MTs Amalianur", 
-          href: settings?.instagram_mts || "#", 
-          icon: School, 
-          hasLink: !!settings?.instagram_mts 
-        }
-      ].filter(v => v.hasLink)
+        { name: "Yayasan Amalianur", href: settings?.instagram_yayasan, icon: Building },
+        { name: "TK Amalianur", href: settings?.instagram_tk, icon: School },
+        { name: "KB Amalianur", href: settings?.instagram_kb, icon: Users },
+        { name: "MTs Amalianur", href: settings?.instagram_mts, icon: School },
+      ].filter((o) => o.href),
     },
-    { 
-      icon: Youtube, 
+    {
+      icon: Youtube,
       label: "YouTube",
       options: [
-        { 
-          name: "Yayasan Amalianur", 
-          href: settings?.youtube_yayasan || "#", 
-          icon: Building, 
-          hasLink: !!settings?.youtube_yayasan 
-        },
-        { 
-          name: "TK Amalianur", 
-          href: settings?.youtube_tk || "#", 
-          icon: School, 
-          hasLink: !!settings?.youtube_tk 
-        },
-        { 
-          name: "KB Amalianur", 
-          href: settings?.youtube_kb || "#", 
-          icon: Users, 
-          hasLink: !!settings?.youtube_kb 
-        },
-        { 
-          name: "MTs Amalianur", 
-          href: settings?.youtube_mts || "#", 
-          icon: School, 
-          hasLink: !!settings?.youtube_mts 
-        }
-      ].filter(v => v.hasLink)
-    }
+        { name: "Yayasan Amalianur", href: settings?.youtube_yayasan, icon: Building },
+        { name: "TK Amalianur", href: settings?.youtube_tk, icon: School },
+        { name: "KB Amalianur", href: settings?.youtube_kb, icon: Users },
+        { name: "MTs Amalianur", href: settings?.youtube_mts, icon: School },
+      ].filter((o) => o.href),
+    },
   ];
 
   const toggleDropdown = (id: string) => {
-    setActiveDropdown(activeDropdown === id ? null : id);
+    setActiveDropdown((prev) => (prev === id ? null : id));
   };
 
   const quickLinks = [
@@ -204,26 +160,25 @@ export default function Footer() {
     { name: "Tentang Kami", href: "/about" },
     { name: "TK Amalianur", href: "/tk" },
     { name: "MTs Amalianur", href: "/mts" },
-    { name: "Kontak", href: "/contact" }
+    { name: "Kontak", href: "/contact" },
   ];
 
   const programLinks = [
     { name: "Program Pendidikan", href: "/programs" },
     { name: "Ekstrakurikuler", href: "/extracurricular" },
     { name: "Pendaftaran", href: "/admission" },
-    { name: "Berita & Artikel", href: "/news" }
+    { name: "Berita & Artikel", href: "/news" },
   ];
 
   return (
     <footer className="bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 text-white relative overflow-hidden">
-      {/* Background pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div 
+        <div
           className="absolute inset-0"
           style={{
             backgroundImage: `radial-gradient(circle at 25px 25px, white 2%, transparent 0%),
                               radial-gradient(circle at 75px 75px, white 2%, transparent 0%)`,
-            backgroundSize: "100px 100px"
+            backgroundSize: "100px 100px",
           }}
         />
       </div>
@@ -236,7 +191,7 @@ export default function Footer() {
           viewport={{ once: true, margin: "-100px" }}
           className="grid lg:grid-cols-4 md:grid-cols-2 gap-10 items-start"
         >
-          {/* Kolom 1 */}
+          {/* ✅ Kolom 1 */}
           <motion.div variants={itemVariants} className="lg:col-span-1">
             <div className="flex items-center gap-4 mb-6">
               {settings?.footer_logo && (
@@ -245,16 +200,17 @@ export default function Footer() {
                   transition={{ type: "spring", stiffness: 300 }}
                   className="relative"
                 >
-                  <div 
+                  <div
                     className="absolute inset-0"
                     style={{
-                      filter: "drop-shadow(0 0 1px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(255,255,255,0.6))"
+                      filter:
+                        "drop-shadow(0 0 1px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(255,255,255,0.6))",
                     }}
                   >
-                    <img 
-                      src={settings.footer_logo} 
-                      alt="Logo Footer" 
-                      className="w-16 h-16 object-contain opacity-20" 
+                    <img
+                      src={settings.footer_logo}
+                      alt="Logo Footer"
+                      className="w-16 h-16 object-contain opacity-20"
                     />
                   </div>
                   <img
@@ -278,15 +234,14 @@ export default function Footer() {
                 "Membangun Generasi Islami dan Berakhlak Mulia melalui pendidikan berkualitas."}
             </p>
 
-            {/* Social Media + Dropdown */}
             <div className="flex gap-2 relative">
               {socialLinks.map((group) => (
                 <div key={group.label} className="relative">
                   <motion.button
-                    whileHover={{ 
-                      scale: 1.1, 
-                      y: -2, 
-                      backgroundColor: "rgba(255,255,255,0.15)" 
+                    whileHover={{
+                      scale: 1.1,
+                      y: -2,
+                      backgroundColor: "rgba(255,255,255,0.15)",
                     }}
                     onClick={() => toggleDropdown(group.label)}
                     className="w-10 h-10 rounded-xl bg-white bg-opacity-10 flex items-center justify-center backdrop-blur-sm border border-white border-opacity-20"
@@ -305,16 +260,16 @@ export default function Footer() {
                         className="absolute bottom-full left-0 mb-2 w-48 bg-white bg-opacity-95 backdrop-blur-lg rounded-2xl border border-white border-opacity-20 shadow-xl z-50"
                       >
                         <div className="p-2">
-                          {group.options.length > 0 ? (
+                          {group.options.length ? (
                             group.options.map((opt) => (
                               <motion.a
                                 key={opt.name}
                                 href={opt.href}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                whileHover={{ 
-                                  x: 5, 
-                                  backgroundColor: "rgba(16,185,129,0.1)" 
+                                whileHover={{
+                                  x: 5,
+                                  backgroundColor: "rgba(16,185,129,0.1)",
                                 }}
                                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:text-emerald-700 group"
                               >
@@ -325,7 +280,7 @@ export default function Footer() {
                               </motion.a>
                             ))
                           ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                            <div className="px-3 py-2 text-sm text-center text-gray-500">
                               Belum ada link
                             </div>
                           )}
@@ -338,19 +293,16 @@ export default function Footer() {
             </div>
           </motion.div>
 
-          {/* Kolom 2 */}
+          {/* ✅ Kolom 2 */}
           <motion.div variants={itemVariants}>
             <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-300 rounded-full" /> Navigasi Cepat
             </h4>
             <ul className="space-y-3">
               {quickLinks.map((link) => (
-                <motion.li 
-                  key={link.name} 
-                  whileHover={{ x: 5 }}
-                >
-                  <Link 
-                    href={link.href} 
+                <motion.li key={link.name} whileHover={{ x: 5 }}>
+                  <Link
+                    href={link.href}
                     className="text-green-100 hover:text-white flex items-center gap-2 text-sm group"
                   >
                     <div className="w-1 h-1 bg-emerald-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -361,19 +313,16 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Kolom 3 */}
+          {/* ✅ Kolom 3 */}
           <motion.div variants={itemVariants}>
             <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-300 rounded-full" /> Program Kami
             </h4>
             <ul className="space-y-3">
               {programLinks.map((link) => (
-                <motion.li 
-                  key={link.name} 
-                  whileHover={{ x: 5 }}
-                >
-                  <Link 
-                    href={link.href} 
+                <motion.li key={link.name} whileHover={{ x: 5 }}>
+                  <Link
+                    href={link.href}
                     className="text-green-100 hover:text-white flex items-center gap-2 text-sm group"
                   >
                     <div className="w-1 h-1 bg-emerald-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -384,17 +333,14 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Kolom 4 */}
+          {/* ✅ Kolom 4 */}
           <motion.div variants={itemVariants}>
             <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-300 rounded-full" /> Hubungi Kami
             </h4>
 
             <div className="space-y-4">
-              <motion.div 
-                className="flex items-start gap-3 group" 
-                whileHover={{ x: 3 }}
-              >
+              <motion.div className="flex items-start gap-3 group" whileHover={{ x: 3 }}>
                 <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center border border-emerald-400 group-hover:bg-emerald-400 transition-colors">
                   <MapPin className="w-4 h-4 text-white" />
                 </div>
@@ -403,41 +349,29 @@ export default function Footer() {
                 </p>
               </motion.div>
 
-              <motion.div 
-                className="flex items-center gap-3 group" 
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 border border-emerald-400 flex items-center justify-center group-hover:bg-emerald-400 transition-colors">
+              <motion.div className="flex items-center gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center border border-emerald-400 group-hover:bg-emerald-400 transition-colors">
                   <Phone className="w-4 h-4 text-white" />
                 </div>
-                <a 
-                  href={`tel:${contact?.phone}`} 
-                  className="text-green-100 hover:text-white text-sm"
-                >
+                <a href={`tel:${contact?.phone}`} className="text-green-100 hover:text-white text-sm">
                   {contact?.phone || "+62 812 3456 7890"}
                 </a>
               </motion.div>
 
-              <motion.div 
-                className="flex items-center gap-3 group" 
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 border border-emerald-400 flex items-center justify-center group-hover:bg-emerald-400 transition-colors">
+              <motion.div className="flex items-center gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center border border-emerald-400 group-hover:bg-emerald-400 transition-colors">
                   <Mail className="w-4 h-4 text-white" />
                 </div>
-                <a 
-                  href={`mailto:${contact?.email}`} 
+                <a
+                  href={`mailto:${contact?.email}`}
                   className="text-green-100 hover:text-white text-sm"
                 >
                   {contact?.email || "info@amalianur.or.id"}
                 </a>
               </motion.div>
 
-              <motion.div 
-                className="flex items-start gap-3 group" 
-                whileHover={{ x: 3 }}
-              >
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 border border-emerald-400 flex items-center justify-center group-hover:bg-emerald-400 transition-colors">
+              <motion.div className="flex items-start gap-3 group" whileHover={{ x: 3 }}>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center border border-emerald-400 group-hover:bg-emerald-400 transition-colors">
                   <Clock className="w-4 h-4 text-white" />
                 </div>
                 <p className="text-green-100 text-sm">
@@ -449,13 +383,13 @@ export default function Footer() {
         </motion.div>
       </div>
 
-      {/* Footer Bottom */}
+      {/* ✅ Footer bawah */}
       <div className="border-t border-green-500 border-opacity-30 bg-white">
         <div className="container mx-auto px-6 py-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.6, ease: [0.42, 0, 0.58, 1] }}
             className="flex flex-col md:flex-row justify-between items-center gap-3 text-center"
           >
             <div className="flex items-center gap-2 text-gray-600 text-sm">
@@ -473,25 +407,16 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Floating Decoration */}
+      {/* ✅ Floating dekorasi */}
       <motion.div
         animate={{ y: [0, -10, 0] }}
-        transition={{ 
-          duration: 4, 
-          repeat: Infinity, 
-          ease: "easeInOut" 
-        }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         className="absolute bottom-10 left-10 w-4 h-4 bg-emerald-300 rounded-full opacity-20"
       />
 
       <motion.div
         animate={{ y: [0, 15, 0] }}
-        transition={{ 
-          duration: 3, 
-          repeat: Infinity, 
-          ease: "easeInOut",
-          delay: 1 
-        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
         className="absolute top-20 right-20 w-3 h-3 bg-white rounded-full opacity-20"
       />
     </footer>

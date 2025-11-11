@@ -16,10 +16,13 @@ interface AboutData {
 
 export default function About() {
   const [data, setData] = useState<AboutData | null>(null);
+  const [loading, setLoading] = useState(true); // ✅ loading state baru
   const supabase = getSupabase();
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true); // ✅ mulai loading
+
       const { data, error } = await supabase
         .from("about")
         .select("*")
@@ -28,7 +31,6 @@ export default function About() {
         .single();
 
       if (error || !data) {
-        // Template default (dummy)
         setData({
           id: 0,
           title: "Tentang Yayasan Amalianur",
@@ -46,18 +48,18 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
       } else {
         setData(data);
       }
+
+      setLoading(false); // ✅ selesai loading
     };
 
     load();
 
-    // ✅ Realtime listener (auto sync dari dashboard admin)
     const channel = supabase
       .channel("about-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "about" },
         (payload) => {
-          console.log("📡 Perubahan data About:", payload);
           if (payload.new) setData(payload.new as AboutData);
         }
       )
@@ -68,37 +70,48 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
     };
   }, []);
 
-  if (!data)
+  // ✅ Loading Skeleton (tidak mengubah UI Anda)
+  if (loading) {
     return (
-      <div className="text-center p-10 text-gray-600 animate-pulse">
-        Memuat data yayasan...
-      </div>
+      <>
+        <Navbar />
+        <div className="flex justify-center items-center h-screen">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full"
+          />
+        </div>
+        <Footer />
+      </>
     );
+  }
 
   return (
     <>
       <Head>
-        <title>{data.title} — Yayasan Amalianur</title>
+        <title>{data?.title} — Yayasan Amalianur</title>
       </Head>
 
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
         <Navbar />
-        {/* Tambah padding-top agar tidak tertutup navbar */}
+
         <main className="container mx-auto px-6 pt-32 pb-16 flex-1">
-          {/* Judul Section */}
+
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-4xl md:text-5xl font-bold text-center text-green-800 mb-12"
           >
-            {data.title}
+            {data?.title}
           </motion.h1>
 
-          {/* Section 1 - Tentang */}
+          {/* ✅ Section Tentang */}
           <div className="grid md:grid-cols-2 gap-10 items-center">
             <motion.img
-              src={data.image_url || "/images/about-default.jpg"}
+              src={data?.image_url || "/images/about-default.jpg"}
+              loading="lazy"                  // ✅ Lazy loading gambar
               alt="Yayasan Amalianur"
               className="rounded-2xl shadow-xl object-cover w-full h-[400px]"
               initial={{ opacity: 0, x: -50 }}
@@ -106,6 +119,7 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             />
+
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -114,17 +128,18 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
               className="bg-white rounded-2xl shadow-lg p-8 border-2 border-green-100"
             >
               <div className="relative">
+
                 <div className="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-green-500 rounded-tl-lg"></div>
                 <div className="absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 border-green-500 rounded-br-lg"></div>
-                
+
                 <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-line font-sans tracking-normal">
-                  {data.content}
+                  {data?.content}
                 </p>
               </div>
             </motion.div>
           </div>
 
-          {/* Section 2 - Visi & Misi */}
+          {/* ✅ Section Visi & Misi */}
           <section className="mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -145,7 +160,7 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
                 className="bg-white shadow-md rounded-xl p-6 border-l-4 border-green-500"
               >
                 <h3 className="text-xl font-bold text-green-700 mb-2">Visi</h3>
-                <p className="text-gray-700">{data.vision}</p>
+                <p className="text-gray-700">{data?.vision}</p>
               </motion.div>
 
               <motion.div
@@ -156,12 +171,12 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
                 className="bg-white shadow-md rounded-xl p-6 border-l-4 border-green-500"
               >
                 <h3 className="text-xl font-bold text-green-700 mb-2">Misi</h3>
-                <p className="text-gray-700 whitespace-pre-line">{data.mission}</p>
+                <p className="text-gray-700 whitespace-pre-line">{data?.mission}</p>
               </motion.div>
             </div>
           </section>
 
-          {/* Section 3 - Nilai-nilai */}
+          {/* ✅ Section Nilai-nilai */}
           <section className="mt-20">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -197,6 +212,7 @@ Didirikan atas dasar semangat kebersamaan dan keikhlasan untuk mencerdaskan kehi
             </div>
           </section>
         </main>
+
         <Footer />
       </div>
     </>

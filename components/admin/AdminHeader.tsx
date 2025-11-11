@@ -1,6 +1,8 @@
-// components/admin/AdminHeader.tsx
 "use client";
-export default function AdminHeader(){
+
+import { memo } from "react";
+
+function AdminHeaderComponent() {
   return (
     <header className="bg-white p-3 shadow sticky top-0 z-30">
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
@@ -13,3 +15,5 @@ export default function AdminHeader(){
     </header>
   );
 }
+
+export default memo(AdminHeaderComponent);

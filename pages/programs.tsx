@@ -1,4 +1,4 @@
-// pages/programs.tsx
+// pages/programs.tsx 
 "use client";
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabaseClient";
@@ -18,15 +18,19 @@ interface Program {
 export default function Programs() {
   const supabase = getSupabase();
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [loading, setLoading] = useState(true); // ✅ Tambah loading
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true); // ✅ Set loading mulai
       const { data } = await supabase
         .from("programs")
         .select("*")
         .eq("is_published", true)
         .order("created_at", { ascending: true });
+
       setPrograms(data || []);
+      setLoading(false); // ✅ Stop loading
     };
 
     fetchData();
@@ -46,16 +50,39 @@ export default function Programs() {
     };
   }, []);
 
-  if (programs.length === 0)
+  // ✅ Loading UI (tidak mengubah layout utama)
+  if (loading) {
     return (
-      <div className="text-center mt-32 text-gray-500">
-        Belum ada program ditambahkan.
-      </div>
+      <>
+        <Navbar />
+        <div className="flex justify-center items-center h-screen">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full"
+          />
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  // ✅ Tidak ada data setelah fetch
+  if (!loading && programs.length === 0)
+    return (
+      <>
+        <Navbar />
+        <div className="text-center mt-32 text-gray-500">
+          Belum ada program ditambahkan.
+        </div>
+        <Footer />
+      </>
     );
 
   return (
     <>
       <Navbar />
+
       <main className="container mx-auto px-6 pt-28 pb-16">
         <motion.h1
           initial={{ opacity: 0, y: -30 }}
@@ -79,12 +106,18 @@ export default function Programs() {
                 alt={p.title}
                 className="w-full h-48 object-cover"
               />
+
               <div className="p-5">
                 <h3 className="text-lg font-semibold text-green-800">{p.title}</h3>
-                {p.subtitle && <p className="text-sm text-gray-600">{p.subtitle}</p>}
+
+                {p.subtitle && (
+                  <p className="text-sm text-gray-600">{p.subtitle}</p>
+                )}
+
                 <p className="mt-3 text-gray-700 text-sm leading-relaxed">
                   {p.description}
                 </p>
+
                 <div className="mt-2 text-xs text-green-600 font-medium">
                   {p.category}
                 </div>
@@ -93,6 +126,7 @@ export default function Programs() {
           ))}
         </div>
       </main>
+
       <Footer />
     </>
   );

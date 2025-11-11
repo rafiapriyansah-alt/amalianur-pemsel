@@ -3,19 +3,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Home, Newspaper, List, Image, Users, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getSupabase } from "../../lib/supabaseClient";
 
-// 🔹 Tipe data lengkap agar tidak error di TypeScript
+// Tipe data aman
 interface SettingsData {
   sidebar_logo?: string | null;
   logo_url?: string | null;
   site_name?: string | null;
 }
 
-/**
- * AdminSidebar props:
- * - open: boolean (mobile)
- * - onClose: () => void
- */
+// Tambahkan cache sederhana (mencegah double-fetch)
+let settingsCache: SettingsData | null = null;
+
 export default function AdminSidebar({
   open = false,
   onClose = () => {},
@@ -33,44 +32,49 @@ export default function AdminSidebar({
     { href: "/admin/settings", label: "Settings", icon: <Settings size={16} /> },
   ];
 
-  const [settings, setSettings] = useState<SettingsData>({});
+  const [settings, setSettings] = useState<SettingsData>(settingsCache ?? {});
+  const supabase = getSupabase();
 
   useEffect(() => {
-    // Ambil data settings dari Supabase
-    (async () => {
-      try {
-        const client = require("../../lib/supabaseClient");
-        const supabase =
-          client.supabase ?? (client.getSupabase ? client.getSupabase() : null);
-        if (!supabase) return;
+    let mounted = true;
 
-        const { data, error } = await supabase
-          .from("settings")
-          .select("sidebar_logo, logo_url, site_name")
-          .single();
-
-        if (!error && data) setSettings(data as SettingsData);
-      } catch (e) {
-        console.warn("Sidebar: gagal mengambil settings", e);
+    async function loadSettings() {
+      // ✅ Kalau sudah ada cache → skip fetch
+      if (settingsCache) {
+        setSettings(settingsCache);
+        return;
       }
-    })();
-  }, []);
 
-  const siteName = settings.site_name || "Yayasan Amalianur";
+      const { data, error } = await supabase
+        .from("settings")
+        .select("sidebar_logo, logo_url, site_name")
+        .single();
+
+      if (!mounted) return;
+      if (!error && data) {
+        settingsCache = data; // ✅ Simpan cache
+        setSettings(data);
+      }
+    }
+
+    loadSettings();
+
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
+
   const logoUrl = settings.sidebar_logo || settings.logo_url || null;
+  const siteName = settings.site_name || "Yayasan Amalianur";
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-64 bg-white border-r shadow-sm z-40">
         <div className="p-4 flex items-center gap-3 border-b">
           <div className="w-12 h-12 rounded-lg bg-green-600 flex items-center justify-center text-white font-bold text-lg">
             {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="logo"
-                className="w-10 h-10 object-contain rounded"
-              />
+              <img src={logoUrl} alt="logo" className="w-10 h-10 object-contain rounded" />
             ) : (
               <span>AN</span>
             )}
@@ -99,7 +103,7 @@ export default function AdminSidebar({
         </div>
       </aside>
 
-      {/* Mobile sidebar overlay */}
+      {/* MOBILE SIDEBAR */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -115,6 +119,7 @@ export default function AdminSidebar({
               className="absolute inset-0 bg-black"
               onClick={onClose}
             />
+
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -125,11 +130,7 @@ export default function AdminSidebar({
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-lg bg-green-600 flex items-center justify-center text-white font-bold">
                   {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt="logo"
-                      className="w-10 h-10 object-contain rounded"
-                    />
+                    <img src={logoUrl} alt="logo" className="w-10 h-10 object-contain rounded" />
                   ) : (
                     <span>AN</span>
                   )}

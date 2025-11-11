@@ -1,41 +1,39 @@
-// lib/supabaseClient.ts
+// ✅ lib/supabaseClient.ts — versi paling ringan & cepat
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-// Ambil environment variable dari .env.local
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Validasi agar tidak error saat build
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  if (typeof window !== "undefined") {
+// ✅ Validasi environment variable saat development
+if (typeof window !== "undefined") {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn(
-      "[Supabase] ⚠️ Missing environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      "[Supabase] ⚠️ Missing env: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   }
 }
 
-// Supabase client tunggal (singleton pattern)
-let client: SupabaseClient | null = null;
+// ✅ Singleton Supabase Client (hindari multiple instances)
+let supabaseClient: SupabaseClient | null = null;
 
-/**
- * Pastikan hanya ada satu instance Supabase di seluruh aplikasi.
- * Ini mencegah multiple connections saat Fast Refresh di dev mode.
- */
 export function getSupabase(): SupabaseClient {
-  if (!client) {
-    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  if (!supabaseClient) {
+    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
-        persistSession: true, // biar user login nggak ke-reset saat refresh
+        persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        
+        // ✅ Tidak perlu detectSessionInUrl karena kamu tidak pakai OAuth
+        detectSessionInUrl: false,
       },
+
+      // ✅ Tidak perlu menaikkan frekuensi update realtime
+      // Default lebih ringan & cepat
       realtime: {
-        params: { eventsPerSecond: 10 }, // supaya realtime stabil
+        params: {},
       },
     });
   }
-  return client;
-}
 
-// export default (opsional)
-export const supabase = getSupabase();
+  return supabaseClient;
+}

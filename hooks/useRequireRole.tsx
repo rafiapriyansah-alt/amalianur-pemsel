@@ -1,30 +1,30 @@
-// hooks/useRequireRole.tsx
+// ✅ hooks/useRequireRole.ts – versi cepat & stabil
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabaseClient";
 import { useRouter } from "next/router";
 
 export function useRequireRole(allowedRoles: string[]) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const supabase = getSupabase();
+
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    async function checkAuth() {
+    async function checkAuthOnce() {
       try {
-        // 1. Cek session yang aktif
+        // ✅ Ambil session
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (!mounted) return;
 
         if (!session) {
-          console.log("❌ No session found, redirecting to login");
-          router.push("/admin/login");
+          router.replace("/admin/login");
           return;
         }
 
-        // 2. Cek user data dari database
+        // ✅ Ambil role user dari DB (satu kali saja)
         const { data: user, error } = await supabase
           .from("users")
           .select("role")
@@ -34,56 +34,43 @@ export function useRequireRole(allowedRoles: string[]) {
         if (!mounted) return;
 
         if (error || !user) {
-          console.log("❌ User not found in database");
-          router.push("/admin/login");
+          router.replace("/admin/login");
           return;
         }
 
-        // 3. Cek role permission
+        // ✅ Permission check
         if (!allowedRoles.includes(user.role)) {
-          console.log(`❌ Role ${user.role} not allowed`);
-          router.push("/admin/unauthorized");
+          router.replace("/admin/unauthorized");
           return;
         }
 
-        // 4. Auth berhasil
-        console.log("✅ Auth successful, role:", user.role);
+        // ✅ Lulus auth
         setLoading(false);
-        
-      } catch (error) {
-        console.error("Auth check error:", error);
-        if (mounted) {
-          router.push("/admin/login");
-        }
+      } catch (err) {
+        console.error("Auth error:", err);
+        router.replace("/admin/login");
       }
     }
 
-    checkAuth();
+    // ✅ Jalankan hanya sekali saat mount
+    checkAuthOnce();
 
-    // 5. Listen untuk auth state changes (tab/window lain)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-        
-        console.log("Auth state changed:", event);
-        
-        if (event === 'SIGNED_OUT') {
-          router.push("/admin/login");
-        } else if (event === 'SIGNED_IN' && session) {
-          // Re-validate role ketika sign in di tab lain
-          await checkAuth();
-        } else if (event === 'TOKEN_REFRESHED') {
-          // Session diperbarui, continue loading
-          setLoading(false);
-        }
+    // ✅ Listener logout-saja (ringan)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (!mounted) return;
+
+      if (event === "SIGNED_OUT") {
+        router.replace("/admin/login");
       }
-    );
+    });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [router, allowedRoles, supabase]);
+  }, []); // ✅ kosong → tidak dipanggil ulang
 
   return { loading };
 }
