@@ -2,9 +2,8 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/admin/programs": "pages/admin/programs.js",
-  "/admin/news": "pages/admin/news.js",
-  "/admin/settings": "pages/admin/settings.js",
-  "/admin/home": "pages/admin/home.js",
-  "/admin": "pages/admin.js"
+  "/admin/galeri": "pages/admin/galeri.js",
+  "/": "pages/index.js",
+  "/about": "pages/about.js",
+  "/kb": "pages/kb.js"
 }

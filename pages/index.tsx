@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { getSupabase } from "../lib/supabaseClient";
-import { ChevronRight, Calendar, User } from "lucide-react";
+import { ChevronRight, Calendar, User, Quote } from "lucide-react";
 import Navbar from "../components/admin/Navbar";
 import Footer from "../components/admin/Footer";
 import Hero from "../components/admin/Hero";
@@ -308,46 +308,64 @@ export default function Home() {
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 1 }}
-              className="bg-gradient-to-r from-green-50 to-white rounded-2xl p-6 md:p-12 shadow-lg flex flex-col md:flex-row items-center gap-8 md:gap-10"
+              className="bg-white rounded-2xl p-6 md:p-12 shadow-2xl border border-green-100 relative overflow-hidden"
             >
-              <motion.div
-                initial={{ opacity: 0, x: -80 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 1 }}
-                className="md:w-1/3 w-full flex justify-center"
-              >
-                <img
-                  src={home?.kepala_photo || "/images/kepala-yayasan.jpg"}
-                  alt="Kepala Yayasan"
-                  className="rounded-2xl shadow-xl w-full max-w-xs md:max-w-sm object-cover"
-                />
-              </motion.div>
+              {/* Background decorative elements */}
+              <div className="absolute top-0 left-0 w-32 h-32 bg-green-50 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-70"></div>
+              <div className="absolute bottom-0 right-0 w-40 h-40 bg-green-50 rounded-full translate-x-1/3 translate-y-1/3 opacity-70"></div>
+              
+              <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 relative z-10">
+                <motion.div
+                  initial={{ opacity: 0, x: -80 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 1 }}
+                  className="md:w-1/3 w-full flex justify-center"
+                >
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl blur-lg opacity-20"></div>
+                    <img
+                      src={home?.kepala_photo || "/images/kepala-yayasan.jpg"}
+                      alt="Kepala Yayasan"
+                      className="rounded-2xl shadow-xl w-full max-w-xs md:max-w-sm object-cover relative z-10 border-4 border-white"
+                    />
+                  </div>
+                </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: 80 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 1 }}
-                className="md:w-2/3 text-gray-700 text-center md:text-left"
-              >
-                <h2 className="text-2xl md:text-3xl font-bold text-green-800 mb-4">
-                  Ucapan dari Kepala Yayasan
-                </h2>
-                <p className="text-base md:text-lg leading-relaxed">
-                  {home?.welcome_message ||
-                    "Assalamu'alaikum warahmatullahi wabarakatuh. Kami mengajak bersama-sama membangun masa depan yang lebih baik melalui pendidikan dan dakwah."}
-                </p>
-                <div className="mt-6 md:mt-8">
-                  <img
-                    src={home?.ttd_photo || "/images/ttd.png"}
-                    alt="Tanda Tangan"
-                    className="w-32 md:w-40 mb-2 opacity-90 mx-auto md:mx-0"
-                  />
-                  <p className="font-semibold text-green-800 text-center md:text-left">
-                    {home?.kepala_name || "H. Ahmad Fauzan"}
-                  </p>
-                  <p className="text-sm text-gray-500 text-center md:text-left">Kepala Yayasan Amalianur</p>
-                </div>
-              </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, x: 80 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 1 }}
+                  className="md:w-2/3 text-gray-700"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Quote className="w-6 h-6 text-green-600" />
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-green-800">
+                      Sambutan Kepala Yayasan
+                    </h2>
+                  </div>
+                  
+                  <div className="bg-green-50 rounded-xl p-6 border-l-4 border-green-500 mb-6">
+                    <p className="text-base md:text-lg leading-relaxed text-gray-700 italic">
+                      "{home?.welcome_message ||
+                        "Assalamu'alaikum warahmatullahi wabarakatuh. Selamat datang di Yayasan Amalianur, lembaga pendidikan yang berkomitmen untuk mencetak generasi Muslim yang berakhlak mulia, berilmu, dan berkontribusi bagi umat. Kami percaya bahwa pendidikan adalah investasi terbaik untuk masa depan, dan melalui pendekatan Islami yang terpadu, kami berusaha menciptakan lingkungan belajar yang inspiratif dan menyenangkan."}"
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-green-200">
+                    <div>
+                      <p className="font-semibold text-green-800 text-lg">
+                        {home?.kepala_name || "H. Ahmad Fauzan"}
+                      </p>
+                      <p className="text-sm text-gray-500">Kepala Yayasan Amalianur</p>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Membangun Generasi Muslim Berakhlak Mulia
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             </motion.div>
           </section>
 
