@@ -8,11 +8,12 @@ import { useRequireRole } from "../../hooks/useRequireRole";
 interface Program {
   id: string;
   title: string;
+  subtitle?: string;
   description: string;
-  content: string;
-  image?: string;
+  image_url?: string;
+  category: string;
+  is_published: boolean;
   created_at: string;
-  updated_at?: string;
 }
 
 interface UploadResult {
@@ -26,8 +27,9 @@ export default function AdminPrograms() {
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
-  const [content, setContent] = useState("");
+  const [category, setCategory] = useState<string>("all");
   const [file, setFile] = useState<File | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,8 +62,8 @@ export default function AdminPrograms() {
   async function saveProgram() {
     if (!supabase) return;
     
-    if (!title.trim() || !content.trim()) {
-      alert("❌ Judul dan konten harus diisi");
+    if (!title.trim()) {
+      alert("❌ Judul harus diisi");
       return;
     }
 
@@ -69,10 +71,10 @@ export default function AdminPrograms() {
       setSaving(true);
       let imageUrl: string | undefined = undefined;
 
+      // Upload gambar jika ada
       if (file) {
         const uploaded = await uploadImageFile(file, "programs");
         
-        // Handle both string and object return types
         if (uploaded) {
           if (typeof uploaded === 'string') {
             imageUrl = uploaded;
@@ -82,15 +84,18 @@ export default function AdminPrograms() {
         }
       }
 
+      // Data yang sesuai dengan struktur tabel database (TANPA updated_at)
       const programData = {
         title: title.trim(),
+        subtitle: subtitle.trim(),
         description: description.trim(),
-        content: content.trim(),
-        image: imageUrl,
-        updated_at: new Date().toISOString()
+        category,
+        image_url: imageUrl,
+        is_published: true // Semua program otomatis published
       };
 
       if (editing) {
+        // Update program yang sudah ada
         const { error } = await supabase
           .from("programs")
           .update(programData)
@@ -99,6 +104,7 @@ export default function AdminPrograms() {
         if (error) throw error;
         alert("✅ Program berhasil diperbarui!");
       } else {
+        // Tambah program baru
         const { error } = await supabase
           .from("programs")
           .insert([{ 
@@ -112,9 +118,9 @@ export default function AdminPrograms() {
 
       resetForm();
       await loadPrograms();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving program:", error);
-      alert("❌ Gagal menyimpan program");
+      alert(`❌ Gagal menyimpan program: ${error.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
@@ -122,8 +128,9 @@ export default function AdminPrograms() {
 
   function resetForm() {
     setTitle("");
+    setSubtitle("");
     setDescription("");
-    setContent("");
+    setCategory("all");
     setFile(null);
     setEditing(null);
   }
@@ -131,8 +138,9 @@ export default function AdminPrograms() {
   function startEdit(program: Program) {
     setEditing(program.id);
     setTitle(program.title);
+    setSubtitle(program.subtitle || "");
     setDescription(program.description || "");
-    setContent(program.content);
+    setCategory(program.category || "all");
     setFile(null);
   }
 
@@ -163,6 +171,7 @@ export default function AdminPrograms() {
         </h3>
 
         <div className="space-y-4 mb-6">
+          {/* Judul Program */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Judul Program *
@@ -172,34 +181,54 @@ export default function AdminPrograms() {
               placeholder="Masukkan judul program" 
               value={title} 
               onChange={(e) => setTitle(e.target.value)} 
+              required
             />
           </div>
 
+          {/* Subtitle */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Deskripsi Singkat
+              Subtitle
             </label>
             <input 
               className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-green-500 focus:border-transparent" 
-              placeholder="Masukkan deskripsi singkat program" 
+              placeholder="Masukkan subtitle program" 
+              value={subtitle} 
+              onChange={(e) => setSubtitle(e.target.value)} 
+            />
+          </div>
+
+          {/* Deskripsi */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Deskripsi Program
+            </label>
+            <textarea 
+              className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical" 
+              placeholder="Masukkan deskripsi program..." 
+              rows={4}
               value={description} 
               onChange={(e) => setDescription(e.target.value)} 
             />
           </div>
 
+          {/* Kategori */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Konten Program *
+              Kategori
             </label>
-            <textarea 
-              className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical" 
-              placeholder="Tulis detail lengkap program di sini..." 
-              rows={6}
-              value={content} 
-              onChange={(e) => setContent(e.target.value)} 
-            />
+            <select 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="border border-gray-300 p-3 rounded-lg w-full focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="all">Semua</option>
+              <option value="tk">TK</option>
+              <option value="mts">MTS</option>
+            </select>
           </div>
 
+          {/* Upload Gambar */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Gambar Program
@@ -215,13 +244,19 @@ export default function AdminPrograms() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          {/* Tombol Aksi */}
+          <div className="flex gap-3 pt-4">
             <button 
               onClick={saveProgram} 
               disabled={saving}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {saving ? "Menyimpan..." : editing ? "Update Program" : "Simpan Program"}
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Menyimpan...
+                </>
+              ) : editing ? "Update Program" : "Simpan Program"}
             </button>
             
             {editing && (
@@ -235,6 +270,7 @@ export default function AdminPrograms() {
           </div>
         </div>
 
+        {/* Daftar Program */}
         <div className="mt-8">
           <h4 className="text-lg font-semibold mb-4 text-gray-800">Daftar Program</h4>
           
@@ -254,19 +290,22 @@ export default function AdminPrograms() {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-800 mb-2">{program.title}</h5>
-                      {program.description && (
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {program.description}
+                      {program.subtitle && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          {program.subtitle}
                         </p>
                       )}
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                        {program.content}
+                      <p className="text-sm text-gray-600 mb-3">
+                        {program.description}
                       </p>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                          {program.category.toUpperCase()}
+                        </span>
                         <span>
                           Dibuat: {new Date(program.created_at).toLocaleDateString('id-ID')}
                         </span>
-                        {program.image && (
+                        {program.image_url && (
                           <span className="text-green-600">✓ Ada gambar</span>
                         )}
                       </div>
