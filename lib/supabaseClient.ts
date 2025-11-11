@@ -16,24 +16,31 @@ if (typeof window !== "undefined") {
 // ✅ Singleton Supabase Client (hindari multiple instances)
 let supabaseClient: SupabaseClient | null = null;
 
+function createSupabaseClient(): SupabaseClient {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      
+      // ✅ Tidak perlu detectSessionInUrl karena kamu tidak pakai OAuth
+      detectSessionInUrl: false,
+    },
+
+    // ✅ Tidak perlu menaikkan frekuensi update realtime
+    // Default lebih ringan & cepat
+    realtime: {
+      params: {},
+    },
+  });
+}
+
 export function getSupabase(): SupabaseClient {
   if (!supabaseClient) {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        
-        // ✅ Tidak perlu detectSessionInUrl karena kamu tidak pakai OAuth
-        detectSessionInUrl: false,
-      },
-
-      // ✅ Tidak perlu menaikkan frekuensi update realtime
-      // Default lebih ringan & cepat
-      realtime: {
-        params: {},
-      },
-    });
+    supabaseClient = createSupabaseClient();
   }
-
   return supabaseClient;
 }
+
+// ✅ Ekspor instance langsung untuk backward compatibility
+// TIDAK membuat instance baru, hanya menggunakan singleton yang sama
+export const supabase = getSupabase();
