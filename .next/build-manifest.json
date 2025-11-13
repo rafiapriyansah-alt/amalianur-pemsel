@@ -31,16 +31,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/admin/login.js"
-    ],
-    "/admin/pendaftaran": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/admin/pendaftaran.js"
-    ],
-    "/admin/programs": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/admin/programs.js"
     ]
   },
   "ampFirstPages": []
