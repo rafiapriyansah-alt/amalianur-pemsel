@@ -9,6 +9,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [siteName, setSiteName] = useState<string>("Yayasan Amalianur");
   const [educationOpen, setEducationOpen] = useState(false);
   const [mobileEducationOpen, setMobileEducationOpen] = useState(false);
@@ -27,15 +28,21 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 🔹 Ambil data logo dari tabel settings Supabase
   useEffect(() => {
     const supabase = getSupabase();
 
     const load = async () => {
-      const { data } = await supabase.from("settings").select("*").single();
-      if (data) {
-        setLogo(data.logo_url || null);
-        setSiteName(data.site_name || "Yayasan Amalianur");
+      try {
+        setLoading(true);
+        const { data } = await supabase.from("settings").select("*").single();
+        if (data) {
+          setLogo(data.logo_url || null);
+          setSiteName(data.site_name || "Yayasan Amalianur");
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      } finally {
+        setLoading(false);
       }
     };
     load();
@@ -43,10 +50,17 @@ export default function Navbar() {
     const sub = supabase
       .channel("settings-navbar")
       .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, async () => {
-        const { data } = await supabase.from("settings").select("*").single();
-        if (data) {
-          setLogo(data.logo_url || null);
-          setSiteName(data.site_name || "Yayasan Amalianur");
+        try {
+          setLoading(true);
+          const { data } = await supabase.from("settings").select("*").single();
+          if (data) {
+            setLogo(data.logo_url || null);
+            setSiteName(data.site_name || "Yayasan Amalianur");
+          }
+        } catch (error) {
+          console.error("Error updating settings:", error);
+        } finally {
+          setLoading(false);
         }
       })
       .subscribe();
@@ -69,7 +83,6 @@ export default function Navbar() {
     }, 200);
   };
 
-  // Menu items yang lebih ringkas untuk tablet
   const menuItems = [
     { name: "Home", href: "/" },
     { name: "Tentang", href: "/about" },
@@ -110,33 +123,45 @@ export default function Navbar() {
       ref={navbarRef}
       className={`fixed w-full top-0 z-50 transition-all duration-300 ${
         scrolled || open 
-          ? "bg-white shadow-md" 
+          ? "bg-white shadow-md"
           : "bg-white/95 backdrop-blur-md"
       }`}
     >
       <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-        {/* LOGO - Diperkecil untuk tablet */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          {logo ? (
-            <motion.img
-              src={logo}
-              alt="Logo Yayasan"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover shadow-sm"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            />
-          ) : (
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
-              <span className="text-white font-bold text-xs">YA</span>
-            </div>
-          )}
-          <div>
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            {loading ? (
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-lg shadow-sm animate-pulse overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                <span className="absolute inset-0 flex items-center justify-center text-white/50 font-bold text-xs">YA</span>
+              </div>
+            ) : logo ? (
+              <motion.img
+                src={logo}
+                alt="Logo Yayasan"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover shadow-sm"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+              />
+            ) : (
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-sm flex items-center justify-center">
+                <span className="text-white font-bold text-xs">YA</span>
+              </div>
+            )}
+          </motion.div>
+          <div className={loading ? "animate-pulse" : ""}>
             <div className="font-bold text-green-800 text-sm md:text-lg leading-tight">{siteName}</div>
             <div className="text-xs text-gray-500 leading-tight">Pematang Seleng</div>
           </div>
         </div>
 
-        {/* DESKTOP & TABLET MENU - Dioptimalkan untuk iPad */}
         <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-sm font-medium text-gray-700">
           {menuItems.map((item, i) => (
             <motion.div
@@ -146,7 +171,6 @@ export default function Navbar() {
               className="relative group"
             >
               {item.dropdown ? (
-                // Dropdown untuk Pendidikan
                 <div 
                   className="relative"
                   onMouseEnter={handleEducationMouseEnter}
@@ -163,7 +187,6 @@ export default function Navbar() {
                   </button>
                   <span className="absolute left-2 xl:left-3 bottom-0 w-0 h-0.5 bg-green-400 transition-all duration-300 group-hover:w-[calc(100%-16px)] xl:group-hover:w-[calc(100%-24px)] rounded-full"></span>
                   
-                  {/* Dropdown Menu */}
                   <AnimatePresence>
                     {educationOpen && (
                       <motion.div
@@ -194,7 +217,6 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
               ) : (
-                // Menu biasa
                 <Link
                   href={item.href}
                   className="px-2 xl:px-3 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 block relative whitespace-nowrap"
@@ -206,7 +228,6 @@ export default function Navbar() {
             </motion.div>
           ))}
           
-          {/* CTA Button - Hanya Daftar saja */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -220,9 +241,7 @@ export default function Navbar() {
           </motion.div>
         </nav>
 
-        {/* TABLET MENU (768px - 1024px) - Menu yang lebih ringkas */}
         <nav className="hidden md:flex lg:hidden items-center gap-3 text-sm font-medium text-gray-700">
-          {/* Menu penting saja untuk tablet */}
           {menuItems.slice(0, 4).map((item, i) => (
             <motion.div
               key={i}
@@ -231,7 +250,6 @@ export default function Navbar() {
               className="relative group"
             >
               {item.dropdown ? (
-                // Dropdown untuk Pendidikan di tablet
                 <div 
                   className="relative"
                   onMouseEnter={handleEducationMouseEnter}
@@ -276,7 +294,6 @@ export default function Navbar() {
             </motion.div>
           ))}
           
-          {/* More dropdown untuk menu lainnya */}
           <div className="relative group">
             <button className="flex items-center gap-1 px-2 py-2 transition-all duration-300 group-hover:text-green-600 rounded-lg group-hover:bg-green-50 whitespace-nowrap text-xs">
               Lainnya
@@ -295,7 +312,6 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* CTA Button untuk tablet - Hanya Daftar saja */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -309,7 +325,6 @@ export default function Navbar() {
           </motion.div>
         </nav>
 
-        {/* MOBILE MENU TOGGLE - Tampil di tablet kecil dan mobile */}
         <motion.button 
           className="md:hidden p-2 text-green-700 relative z-60"
           onClick={() => setOpen(!open)}
@@ -340,7 +355,6 @@ export default function Navbar() {
         </motion.button>
       </div>
 
-      {/* SIDEBAR MOBILE - Dioptimalkan untuk tablet */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -368,9 +382,8 @@ export default function Navbar() {
                 damping: 30,
                 mass: 0.8
               }}
-              className="absolute right-0 top-0 w-72 md:w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100"
+              className="absolute right-0 top-0 w-72 md:w-80 h-full bg-gradient-to-b from-white to-green-50 shadow-2xl p-6 flex flex-col border-l border-green-100 will-change-transform"
             >
-              {/* Header Sidebar */}
               <motion.div 
                 className="flex justify-between items-center mb-8"
                 initial={{ opacity: 0, y: -20 }}
@@ -404,7 +417,6 @@ export default function Navbar() {
                 </motion.button>
               </motion.div>
 
-              {/* Navigation Items */}
               <motion.nav
                 initial="hidden"
                 animate="show"
@@ -414,8 +426,8 @@ export default function Navbar() {
                   show: { 
                     opacity: 1, 
                     transition: { 
-                      staggerChildren: 0.07,
-                      delayChildren: 0.1
+                      staggerChildren: 0.05, // Lebih cepat stagger
+                      delayChildren: 0 // Sinkron dengan header, no delay tambahan
                     } 
                   },
                 }}
@@ -503,11 +515,10 @@ export default function Navbar() {
                 ))}
               </motion.nav>
 
-              {/* CTA Button di sidebar - Hanya Daftar saja */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.2 }} // Delay kecil biar CTA muncul setelah menu
                 className="pt-6 border-t border-green-100/50"
               >
                 <motion.div

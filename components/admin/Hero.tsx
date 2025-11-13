@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image"; // Tambahan: Import Next.js Image
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import { getSupabase } from "../../lib/supabaseClient";
+import { ChevronRight } from "lucide-react"; // Asumsi impor jika butuh
+import Link from "next/link"; // Untuk a href
 
 type HomeTable = {
   hero_images?: string[];
@@ -12,7 +14,7 @@ type HomeTable = {
 interface HeroProps {
   title?: string;
   subtitle?: string;
-  images?: string[];
+  images?: string[]; // Dari props index
   shadow?: boolean;
   intervalMs?: number;
 }
@@ -24,16 +26,14 @@ export default function Hero({
   shadow = true,
   intervalMs = 6000,
 }: HeroProps) {
-  const supabase = getSupabase();
-  const [dbImages, setDbImages] = useState<string[]>(images);
+  const [dbImages, setDbImages] = useState<string[]>(images); // Init dari props, hapus fetch
   const [index, setIndex] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(true); // Hapus preload manual, langsung ready
   const [isMobile, setIsMobile] = useState(false);
-  const preloaded = useRef<Record<number, boolean>>({});
   const timerRef = useRef<number | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Deteksi device type dengan improved logic
+  // Deteksi device type (sama)
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
@@ -45,110 +45,42 @@ export default function Hero({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Parallax + zoom efek dengan adjustment untuk mobile
+  // Parallax + zoom efek (sama)
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"],
   });
 
-  // Smooth spring animation
   const smoothScroll = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001
   });
 
-  // Transform effects - Disesuaikan untuk mobile
   const scale = useTransform(smoothScroll, [0, 1], [1, isMobile ? 1.1 : 1.25]);
   const y = useTransform(smoothScroll, [0, 1], [0, isMobile ? -50 : -120]);
   const brightness = useTransform(smoothScroll, [0, 1], [1, isMobile ? 0.9 : 0.85]);
   const brightnessFilter = useTransform(brightness, (b) => `brightness(${b})`);
 
-  // Wave animation - lebih halus di mobile
   const waveY = useTransform(smoothScroll, [0, 1], [0, isMobile ? 8 : 20]);
 
-  // Ambil data dari Supabase (sinkron otomatis)
-  useEffect(() => {
-    let mounted = true;
-    async function loadImages() {
-      const { data, error }: { data: HomeTable | null; error: any } = await supabase
-        .from("home")
-        .select("hero_images, hero_title, hero_subtitle")
-        .single();
-      if (!error && data && mounted) {
-        setDbImages(data.hero_images || []);
-      }
-    }
-    loadImages();
+  // Hapus fetch Supabase - pakai props dari index
 
-    const channel = supabase
-      .channel("home-hero-sync")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "home" },
-        (payload) => {
-          const updated = (payload.new as HomeTable)?.hero_images;
-          if (updated && Array.isArray(updated)) setDbImages(updated);
-        }
-      )
-      .subscribe();
+  const imagesToShow = dbImages.length ? dbImages : ['/images/hero-default.jpg']; // Fallback sama
 
-    return () => {
-      mounted = false;
-      supabase.removeChannel(channel);
-    };
-  }, [supabase]);
-
-  const imagesToShow = dbImages.length ? dbImages : images;
-
-  // Preload image
-  function preload(idx: number) {
-    const url = imagesToShow[idx];
-    if (!url || preloaded.current[idx]) {
-      preloaded.current[idx] = true;
-      setReady(true);
-      return;
-    }
-    const img = new Image();
-    img.src = url;
-    img.onload = () => {
-      preloaded.current[idx] = true;
-      setReady(true);
-    };
-    img.onerror = () => {
-      preloaded.current[idx] = true;
-      setReady(true);
-    };
-  }
-
-  // Auto ganti gambar tiap beberapa detik
+  // Auto ganti gambar (sederhana, tanpa preload manual - Next Image handle sendiri)
   useEffect(() => {
     if (!imagesToShow.length) return;
-    setReady(false);
-    preload(index);
-    preload((index + 1) % imagesToShow.length);
 
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = window.setInterval(() => {
-      const next = (index + 1) % imagesToShow.length;
-      if (preloaded.current[next]) {
-        setIndex(next);
-        setReady(false);
-      } else preload(next);
+      setIndex((prev) => (prev + 1) % imagesToShow.length);
     }, intervalMs) as any;
 
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, imagesToShow, intervalMs]);
-
-  useEffect(() => {
-    if (imagesToShow.length) {
-      preload(0);
-      preload(1 % imagesToShow.length);
-    } else setReady(true);
-  }, [imagesToShow]);
+  }, [imagesToShow.length, intervalMs]);
 
   const currentImage = imagesToShow[index];
 
@@ -157,7 +89,7 @@ export default function Hero({
       ref={sectionRef}
       className="relative h-screen flex items-center justify-center overflow-hidden"
     >
-      {/* Background dengan efek parallax yang disesuaikan */}
+      {/* Background dengan Next Image + efek parallax */}
       <div className="absolute inset-0">
         {currentImage ? (
           <motion.div
@@ -168,21 +100,20 @@ export default function Hero({
               filter: brightnessFilter 
             }}
             initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: ready ? 1 : 0, scale: isMobile ? 1 : 1.15 }}
+            animate={{ opacity: 1, scale: isMobile ? 1 : 1.15 }}
             transition={{ 
               duration: 1.2, 
               ease: "easeInOut" 
             }}
-            className="absolute inset-0 bg-center bg-cover will-change-transform"
+            className="absolute inset-0 will-change-transform"
           >
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${currentImage})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-              }}
+            <Image
+              src={currentImage}
+              alt="Hero Background"
+              fill
+              className="object-cover object-center"
+              priority={true} // Priority untuk LCP cepat
+              quality={85} // Optimasi kualitas
             />
           </motion.div>
         ) : (
@@ -190,14 +121,14 @@ export default function Hero({
         )}
       </div>
 
-      {/* Overlay shadow */}
+      {/* Overlay shadow (sama) */}
       <div
         className={`absolute inset-0 ${
           shadow ? "bg-black/35 backdrop-blur-[1px]" : "bg-transparent"
         }`}
       />
 
-      {/* Konten Hero */}
+      {/* Konten Hero (sama) */}
       <div className="relative z-10 text-center px-4 sm:px-6 md:px-12 max-w-3xl mx-auto w-full">
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
@@ -217,30 +148,28 @@ export default function Hero({
           {subtitle ?? "Membangun Generasi Islami dan Berakhlak Mulia"}
         </motion.p>
 
-
-
-<motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  transition={{ delay: 0.7 }}
-  className="mt-6 sm:mt-8 flex flex-row gap-3 sm:gap-4 justify-center items-center px-2"
->
-  <a
-    href="/about"
-    className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-auto text-center"
-  >
-    Tentang Kami
-  </a>
-  <a
-    href="/news"
-    className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-auto text-center"
-  >
-    Berita
-  </a>
-</motion.div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="mt-6 sm:mt-8 flex flex-row gap-3 sm:gap-4 justify-center items-center px-2"
+        >
+          <Link
+            href="/about"
+            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-auto text-center"
+          >
+            Tentang Kami
+          </Link>
+          <Link
+            href="/news"
+            className="bg-green-700 text-white font-semibold px-5 sm:px-6 py-2 sm:py-3 rounded-xl shadow hover:bg-green-800 transition text-sm sm:text-base w-auto text-center"
+          >
+            Berita
+          </Link>
+        </motion.div>
       </div>
 
-      {/* Wave bawah dengan efek smooth scrolling */}
+      {/* Wave bawah (sama) */}
       <motion.div 
         className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]"
         style={{

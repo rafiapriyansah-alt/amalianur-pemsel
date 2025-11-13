@@ -1,9 +1,11 @@
 // pages/index.tsx
 import Head from "next/head";
+import Image from "next/image"; // Tambahan: Import Next.js Image untuk optimasi gambar
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
-import { getSupabase } from "../lib/supabaseClient";
+import { getSupabase } from "../lib/supabaseClient"; // Client client untuk subscription
+import { getServerSupabase } from "../lib/supabaseServerClient"; // Server client untuk SSR (file baru dari saran sebelumnya)
 import { ChevronRight, Calendar, User, Quote } from "lucide-react";
 import Navbar from "../components/admin/Navbar";
 import Footer from "../components/admin/Footer";
@@ -14,6 +16,7 @@ interface HomeData {
   hero_title?: string;
   hero_subtitle?: string;
   hero_image?: string;
+  hero_images?: string[]; // Support array jika DB punya
   welcome_message?: string;
   kepala_photo?: string;
   kepala_name?: string;
@@ -48,10 +51,16 @@ interface EducationItem {
   link: string;
 }
 
-export default function Home() {
+// Props dari getServerSideProps
+interface HomeProps {
+  home: HomeData | null;
+  news: NewsItem[];
+}
+
+export default function Home({ home: initialHome, news: initialNews }: HomeProps) {
   const supabase = getSupabase();
-  const [home, setHome] = useState<HomeData | null>(null);
-  const [news, setNews] = useState<NewsItem[]>([]);
+  const [home, setHome] = useState<HomeData | null>(initialHome);
+  const [news, setNews] = useState<NewsItem[]>(initialNews);
   const [currentEduIndex, setCurrentEduIndex] = useState(0);
   const [newsPosition, setNewsPosition] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -77,6 +86,7 @@ export default function Home() {
     }
   }, []);
 
+  // Subscription real-time (tetap untuk update, tapi initial load dari SSR)
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -93,8 +103,6 @@ export default function Home() {
         console.error("Error loading data:", error);
       }
     };
-
-    loadData();
 
     const homeSub = supabase
       .channel("home-changes")
@@ -120,7 +128,7 @@ export default function Home() {
     };
   }, [supabase]);
 
-  // Education items data
+  // Education items data (sama, pakai state home)
   const educationItems: EducationItem[] = [
     {
       key: "kb",
@@ -145,7 +153,7 @@ export default function Home() {
     },
   ];
 
-  // Auto slide pendidikan ke kanan setiap 5 detik hanya untuk mobile
+  // Auto slide pendidikan ke kanan setiap 5 detik hanya untuk mobile (sama)
   useEffect(() => {
     if (!isMobile || isDragging) return;
 
@@ -155,7 +163,7 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [educationItems.length, isMobile, isDragging]);
 
-  // Auto slide berita ke kiri
+  // Auto slide berita ke kiri (sama)
   useEffect(() => {
     if (news.length === 0 || isDragging) return;
 
@@ -175,7 +183,7 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [news.length, isDragging]);
 
-  // Format tanggal
+  // Format tanggal (sama)
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Tanggal tidak tersedia';
     try {
@@ -189,17 +197,17 @@ export default function Home() {
     }
   };
 
-  // Navigasi manual pendidikan
+  // Navigasi manual pendidikan (sama)
   const goToEduSlide = (index: number) => {
     setCurrentEduIndex(index);
   };
 
-  // Navigasi manual berita
+  // Navigasi manual berita (sama)
   const goToNewsSlide = (index: number) => {
     setNewsPosition(index);
   };
 
-  // Handle drag untuk mobile slider pendidikan
+  // Handle drag untuk mobile slider pendidikan (sama)
   const handleEduTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
     setDragStartX(e.touches[0].clientX);
@@ -228,7 +236,7 @@ export default function Home() {
     setTimeout(() => setIsDragging(false), 100);
   };
 
-  // Handle drag untuk news slider
+  // Handle drag untuk news slider (sama)
   const handleNewsTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
     setNewsDragStartX(e.touches[0].clientX);
@@ -269,15 +277,18 @@ export default function Home() {
     setTimeout(() => setIsDragging(false), 100);
   };
 
-  // Prepare hero images - convert single image to array
+  // Prepare hero images - convert single image to array (sama, tapi support hero_images array)
   const getHeroImages = (): string[] => {
+    if (home?.hero_images && home.hero_images.length > 0) {
+      return home.hero_images;
+    }
     if (home?.hero_image) {
       return [home.hero_image];
     }
     return ['/images/hero-default.jpg'];
   };
 
-  // Calculate items per view untuk news slider
+  // Calculate items per view untuk news slider (sama)
   const getNewsItemsPerView = () => {
     if (!isMobile) return 3;
     const containerWidth = newsContainerRef.current?.offsetWidth || 0;
@@ -302,7 +313,7 @@ export default function Home() {
             images={getHeroImages()}
           />
 
-          {/* Ucapan Kepala Yayasan */}
+          {/* Ucapan Kepala Yayasan - Ganti <img> ke <Image> */}
           <section className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
             <motion.div
               initial={{ opacity: 0 }}
@@ -323,10 +334,13 @@ export default function Home() {
                 >
                   <div className="relative">
                     <div className="absolute -inset-4 bg-gradient-to-r from-green-400 to-green-600 rounded-2xl blur-lg opacity-20"></div>
-                    <img
+                    <Image
                       src={home?.kepala_photo || "/images/kepala-yayasan.jpg"}
                       alt="Kepala Yayasan"
+                      width={300} // Sesuaikan dengan ukuran asli gambar
+                      height={300}
                       className="rounded-2xl shadow-xl w-full max-w-xs md:max-w-sm object-cover relative z-10 border-4 border-white"
+                      priority // Priority untuk above-the-fold image
                     />
                   </div>
                 </motion.div>
@@ -385,7 +399,7 @@ export default function Home() {
               </p>
             </motion.div>
 
-            {/* Desktop View - Grid 3 Kolom */}
+            {/* Desktop View - Grid 3 Kolom - Ganti <img> ke <Image> */}
             <div className="hidden md:block">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
                 {educationItems.map((item, i) => (
@@ -409,10 +423,12 @@ export default function Home() {
                     className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-500 border border-green-100 group h-full flex flex-col"
                   >
                     <div className="relative h-56 md:h-64 overflow-hidden flex-shrink-0">
-                      <img
+                      <Image
                         src={item.img}
                         alt={item.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        fill
+                        className="transition-transform duration-700 group-hover:scale-110 object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 33vw"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
                         <h3 className="text-xl md:text-2xl font-bold text-white">
@@ -437,7 +453,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Mobile View - Slider dengan Touch Support */}
+            {/* Mobile View - Slider dengan Touch Support - Ganti <img> ke <Image> */}
             <div className="md:hidden">
               <div className="relative max-w-4xl mx-auto px-2">
                 {/* Slider Wrapper */}
@@ -460,10 +476,13 @@ export default function Home() {
                       >
                         <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-500 border border-green-100 h-full flex flex-col">
                           <div className="relative h-48 overflow-hidden flex-shrink-0">
-                            <img
+                            <Image
                               src={item.img}
                               alt={item.title}
-                              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                              fill
+                              className="transition-transform duration-700 hover:scale-110 object-cover"
+                              sizes="100vw"
+                              loading="lazy" // Lazy load untuk non-priority images
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
                               <h3 className="text-xl font-bold text-white">
@@ -508,7 +527,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* === Berita Terbaru dengan Slider === */}
+          {/* === Berita Terbaru dengan Slider === - Ganti <img> ke <Image> */}
           <section className="container mx-auto px-4 sm:px-6 py-12 md:py-16 bg-green-50">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -556,10 +575,13 @@ export default function Home() {
                           className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border border-green-100 group h-full flex flex-col"
                         >
                           <div className="relative h-40 md:h-48 overflow-hidden flex-shrink-0">
-                            <img
+                            <Image
                               src={item.image_url || "/images/news-default.jpg"}
                               alt={item.title || "Berita"}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              fill
+                              className="transition-transform duration-500 group-hover:scale-110 object-cover"
+                              sizes="(max-width: 768px) 280px, 320px"
+                              loading="lazy"
                             />
                             <div className="absolute top-3 left-3">
                               <span className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-medium">
@@ -663,4 +685,33 @@ export default function Home() {
       </div>
     </>
   );
+}
+
+// getServerSideProps - Fetch data di server untuk initial load cepat
+export async function getServerSideProps() {
+  const supabase = getServerSupabase(); // Pakai server client
+  
+  try {
+    const { data: homeData } = await supabase.from("home").select("*").single();
+    const { data: posts } = await supabase
+      .from("posts")
+      .select("*")
+      .order("published_at", { ascending: false })
+      .limit(8);
+    
+    return {
+      props: {
+        home: homeData ?? null,
+        news: posts ?? [],
+      },
+    };
+  } catch (error) {
+    console.error("Error in getServerSideProps:", error);
+    return {
+      props: {
+        home: null,
+        news: [],
+      },
+    };
+  }
 }

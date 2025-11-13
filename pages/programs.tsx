@@ -35,7 +35,7 @@ export default function Programs() {
 
     fetchData();
 
-    // ✅ Supabase realtime listener
+    
     const channel = supabase
       .channel("programs_realtime")
       .on(
